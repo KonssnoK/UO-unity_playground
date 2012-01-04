@@ -1,0 +1,56 @@
+#summary One-sentence summary of this page.
+
+= UOReader =
+_ovvero_
+il mio tentativo di insideUO per Enhanced Client.
+
+Features:
+  * Runtime reading for .uop files.
+  * Display per Legacy Textures
+  * Display per Enhanced Textures
+  * Display per Multis (in corso)
+  * ([color=#FF0000]New![/color]) Display per String Dictionary
+  * ([color=#FF0000]New![/color]) Display per AnimationFrame
+
+ChangeLog:
+v.52
+	* Added TAB for viewing AnimationFrames. (Code from KRFrameViewer, made by Kons - Wim)
+	* Added TAB for StringDictionary
+	* Added BGWorkers to make the program more stable.
+v.42
+	* Updated tileart reading.
+	* Updated multi drawing.
+v.41
+	* Added radarColor Square in Texture viewing.
+	* Updated tileart reading.
+	* Added "Use EnhancedClient texture" checkbox in Multis view.
+v.4
+	* Added support for tileart.uop.
+v.3
+	* Added Enhanced Client Textures TAB.
+v.2
+	* Added Legacy Textures TAB.
+v.1
+	* Basic Multi support / drawing.
+
+Thanks to:
+- Malganis for the Mythic Package DLL
+- Devil for his .dds reader DLL
+
+PLEASE NOTICE: Enhanced Textures are NOT FINISHED YET. So multis with EC textures will be WRONG viewed.
+
+Known Bugs: 
+- Multi viewing is buggy with some tile.
+
+Screenshots:
+[http://imageshack.us/photo/my-images/849/21225426.jpg http://img849.imageshack.us/img849/2899/21225426.th.jpg]
+
+[http://imageshack.us/photo/my-images/825/52128821.jpg http://img825.imageshack.us/img825/1971/52128821.th.jpg]
+
+[http://imageshack.us/photo/my-images/189/16906439.jpg http://img189.imageshack.us/img189/5820/16906439.th.jpg]
+
+[http://imageshack.us/photo/my-images/15/98330252.jpg http://img15.imageshack.us/img15/8845/98330252.th.jpg]
+
+[http://imageshack.us/photo/my-images/854/20482749.jpg http://img854.imageshack.us/img854/4457/20482749.th.jpg]
+
+[http://imageshack.us/photo/my-images/854/53189107.jpg http://img854.imageshack.us/img854/6852/53189107.th.jpg]
