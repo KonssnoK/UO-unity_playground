@@ -1,0 +1,43 @@
+#summary One-sentence summary of this page.
+
+= Introduction =
+
+Questo programma converte Static.mul Map.mul e StaticIDX.mul in una cartella non compressa di Facet.
+E' possibile impostare le dimensioni e il numero di mappa che si desidera.
+
+[b][color=red]---24/09/08--- Parte 3[/color][/b]
+[b]v2.3[/b]
+- changed X Y calculation 
+- Changed offsetcalculation
+[b][color=red]---24/09/08--- Parte 2[/color][/b]
+[b]v2.2[/b]
+- Fixed Y
+- now mail folder will have name of facet
+- [b]Now Maps are converted Correctly.[/b]
+[b]v2.1[/b]
+- fix at Index_0 file
+- Index_0 will be now created into sector folder
+- Added main folder "SelectME" to select with Packer
+[b][color=red]---22/09/08--- Parte 1[/color][/b]
+[b]v2.0te[/b]
+- fixed some button
+[b]v2.0se[/b]
+- fixed progress bar
+[b]v2.0[/b]
+- fixed progress bar
+- added blocks progress bar
+- fixed idx index
+- added idx index calculation
+- small fixes at Form1
+- small fixes at About
+- added icon
+[b]v1.9[/b]
+Kons' changes:
+- redrawed Form1
+- added bg worker
+- added progress bar
+- reordered Code
+- added about btn
+[b]v1.8[/b]
+This and previous versions were developed by Koksi who didn't make any changelog :P
+[http://img142.imageshack.us/img142/3603/mul2uopec3.jpg]
