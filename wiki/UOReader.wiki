@@ -1,4 +1,4 @@
-#summary One-sentence summary of this page.
+#summary InsideUO for SA client.
 
 = UOReader =
 _ovvero_
