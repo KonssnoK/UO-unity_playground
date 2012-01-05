@@ -84,4 +84,4 @@ Questo programma che sto sviluppando serve a comprimere i files creati con "UO:K
 [b]v0.1[/b] 
 - main classes
 
-[img]http://img523.imageshack.us/img523/2826/packerqb8.jpg[/img]
+[http://img523.imageshack.us/img523/2826/packerqb8.jpg]
