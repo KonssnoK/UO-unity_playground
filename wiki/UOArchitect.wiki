@@ -1,20 +1,20 @@
 #summary v2.6.2mod-K.
 
-= Introduction =
+= UO:Architect v2.6.2mod-K =
 
 Ecco che da adesso i nostri arredatori hanno a disposizione la nuova versione di UO Architect, [u]appositamente sviluppata per loro[/u].
 
 [http://img443.imageshack.us/img443/2825/clipboard01o.jpg]
 
 [color=#FF0000]New Features : [/color]
-* Supports all clients ( ML - SA )
-* Support all tiles ( ML - SA )
-* Added 13000 items to items list
-* 7 20z-height based levels
-* Customizable client .exe using
-* New system to inform builder that tile will be put on higher level
-* Completely rewrited client-comunication code.
-* New toolbox design, 2 separated dragable items, fast searching in treeview completely redrawn on "Pandora's box v3.0" style.
+  * Supports all clients ( ML - SA )
+  * Support all tiles ( ML - SA )
+  * Added 13000 items to items list
+  * 7 20z-height based levels
+  * Customizable client .exe using
+  * New system to inform builder that tile will be put on higher level
+  * Completely rewrited client-comunication code.
+  * New toolbox design, 2 separated dragable items, fast searching in treeview completely redrawn on "Pandora's box v3.0" style.
  
 
 Ecco alcuni screen "esempio" delle potenzialità ( chiedo scusa per le dimensioni ):
