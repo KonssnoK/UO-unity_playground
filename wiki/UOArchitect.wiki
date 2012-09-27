@@ -23,11 +23,9 @@ _2.6.4_
 
 _2.6.3_
 
+TO BE FOUND (i've lost the changelogs somewhere :( )!
+
 _2.6.2_
-
-To be found!
-
-*New Features :*
   * Supports all clients ( ML - SA )
   * Support all tiles ( ML - SA )
   * Added 13000 items to items list
