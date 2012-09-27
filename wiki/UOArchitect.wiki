@@ -16,6 +16,7 @@ This program IS NOT TESTED with HS expansion (it was created before.. :) )
 _2.6.6_
   * Switched to framework 4 (default on VS2012)
   * First public release
+  * Updated some link
 _2.6.5_
 
 _2.6.4_
