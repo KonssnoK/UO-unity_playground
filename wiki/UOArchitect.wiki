@@ -1,8 +1,13 @@
-#summary v2.6.2mod-K.
+#summary v2.6.6mod-K.
 
-= UO:Architect v2.6.2mod-K =
+= UO:Architect v2.6.6mod-K =
 
-Ecco che da adesso i nostri arredatori hanno a disposizione la nuova versione di UO Architect, [u]appositamente sviluppata per loro[/u].
+This is mine modified version of the popular UO:Architect.
+Focus was on the interface and ease of using, not on server.
+
+I'm sorry but i will not provide support for this program because i don't have any uo installation left.
+
+This program IS NOT TESTED with HS expansion (it was created before.. :) )
 
 [http://img443.imageshack.us/img443/2825/clipboard01o.jpg]
 
@@ -17,7 +22,7 @@ Ecco che da adesso i nostri arredatori hanno a disposizione la nuova versione di
   * New toolbox design, 2 separated dragable items, fast searching in treeview completely redrawn on "Pandora's box v3.0" style.
  
 
-Ecco alcuni screen "esempio" delle potenzialità ( chiedo scusa per le dimensioni ):
+This is an example of use:
 
 SA Rendering
 [http://img8.imageshack.us/img8/3183/clipboard01kogh.jpg]
@@ -26,3 +31,6 @@ SA Rendering
 UO Architect Rendering
 [http://img121.imageshack.us/img121/1636/templex.jpg]
 [http://img40.imageshack.us/img40/8575/temple2.jpg]
+
+
+(add your creations below!)
