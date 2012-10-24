@@ -29,46 +29,84 @@ v.62
 		: 11/6 animationframe6
 		: 149/284 legacytexture
 		: 19/19 multicollection
+
 	- Added TAB for EffectDefinitionCollection (format is still unknown)
+
 	- Added BGWorker to Multi loading (Drawing instead is still slow)
+
 	- Fixes at AnimationFrame tree navigation
+
 	- Added Splashscreen for loading UOP
+
 	- Added automated UO Folder search
+
 	- Added custom UO folder saving (To be tested)
+
 	- Updated Tiledata format structure to latest version (4.0.29.X)
 		(I really don't know when those changes were first introduced)
 		NOTICE: Older tiledatas are no more supported because there's no version number update in the new one
+
 	- Migrated to .NET 4.0 (VS2012 base)
+
 	- TileFlags have been corrected -> there are 2 unknown left
+
 	- Added TAB for LocalizedString (very slow)
+
 	- Added TAB for TerrainDefinition
+
 	- Fix at animationFrame treeview
+
 	- Added watermark to AnimationFrame images (JP's Request)
+
+
 v.52
+
 	- Added TAB for viewing AnimationFrames. (Code from KRFrameViewer, made by Kons - Wim)
+
 	- Added TAB for StringDictionary
+
 	- Added BGWorkers to make the program more stable.
+
 v.42
+
 	- Updated tileart reading.
+
 	- Updated multi drawing.
+
 v.41
+
 	- Added radarColor Square in Texture viewing.
+
 	- Updated tileart reading.
+
 	- Added "Use EnhancedClient texture" checkbox in Multis view.
+
 v.4
+
 	- Added support for tileart.uop.
+
 v.3
+
 	- Added Enhanced Client Textures TAB.
+
 v.2
+
 	- Added Legacy Textures TAB.
+
 v.1
+
 	- Basic Multi support / drawing.
 
+
 Thanks to:
+
 - Malganis for the Mythic Package DLL
+
 - Devil for his .dds reader DLL
 
+
 PLEASE NOTICE: Enhanced Textures are NOT FINISHED YET. So multis with EC textures will be WRONG viewed.
+
 
 Screenshots:
 
