@@ -5,7 +5,7 @@
 Questo programma converte Static.mul Map.mul e StaticIDX.mul in una cartella non compressa di Facet.
 E' possibile impostare le dimensioni e il numero di mappa che si desidera.
 
-*[color=red]---24/09/08--- Parte 3[/color]*
+*===---24/09/08--- Parte 3===*
 
 *v2.3*
 
@@ -13,7 +13,7 @@ E' possibile impostare le dimensioni e il numero di mappa che si desidera.
 
 - Changed offsetcalculation
 
-*[color=red]---24/09/08--- Parte 2[/color]*
+*===---24/09/08--- Parte 2===*
 
 *v2.2*
 
@@ -31,7 +31,7 @@ E' possibile impostare le dimensioni e il numero di mappa che si desidera.
 
 - Added main folder "SelectME" to select with Packer
 
-*[color=red]---22/09/08--- Parte 1[/color]*
+*===---22/09/08--- Parte 1===*
 
 *v2.0te*
 
