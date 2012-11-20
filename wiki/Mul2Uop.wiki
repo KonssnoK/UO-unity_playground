@@ -5,39 +5,74 @@
 Questo programma converte Static.mul Map.mul e StaticIDX.mul in una cartella non compressa di Facet.
 E' possibile impostare le dimensioni e il numero di mappa che si desidera.
 
-[b][color=red]---24/09/08--- Parte 3[/color][/b]
-[b]v2.3[/b]
+*[color=red]---24/09/08--- Parte 3[/color]*
+
+*v2.3*
+
 - changed X Y calculation 
+
 - Changed offsetcalculation
-[b][color=red]---24/09/08--- Parte 2[/color][/b]
-[b]v2.2[/b]
+
+*[color=red]---24/09/08--- Parte 2[/color]*
+
+*v2.2*
+
 - Fixed Y
+
 - now mail folder will have name of facet
-- [b]Now Maps are converted Correctly.[/b]
-[b]v2.1[/b]
+
+- *Now Maps are converted Correctly.*
+
+*v2.1*
+
 - fix at Index_0 file
+
 - Index_0 will be now created into sector folder
+
 - Added main folder "SelectME" to select with Packer
-[b][color=red]---22/09/08--- Parte 1[/color][/b]
-[b]v2.0te[/b]
+
+*[color=red]---22/09/08--- Parte 1[/color]*
+
+*v2.0te*
+
 - fixed some button
-[b]v2.0se[/b]
+
+*v2.0se*
+
 - fixed progress bar
-[b]v2.0[/b]
+
+*v2.0*
+
 - fixed progress bar
+
 - added blocks progress bar
+
 - fixed idx index
+
 - added idx index calculation
+
 - small fixes at Form1
+
 - small fixes at About
+
 - added icon
-[b]v1.9[/b]
+
+*v1.9*
+
 Kons' changes:
+
 - redrawed Form1
+
 - added bg worker
+
 - added progress bar
+
 - reordered Code
+
 - added about btn
-[b]v1.8[/b]
+
+*v1.8*
+
 This and previous versions were developed by Koksi who didn't make any changelog :P
+
 [http://img142.imageshack.us/img142/3603/mul2uopec3.jpg]
