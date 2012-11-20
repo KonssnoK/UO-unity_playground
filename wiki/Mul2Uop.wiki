@@ -21,7 +21,7 @@ E' possibile impostare le dimensioni e il numero di mappa che si desidera.
 
 - now mail folder will have name of facet
 
-- *Now Maps are converted Correctly.*
+- Now Maps are converted Correctly.
 
 *v2.1*
 
