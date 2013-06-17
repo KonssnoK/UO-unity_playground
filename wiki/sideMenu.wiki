@@ -1,0 +1,18 @@
+Main
+
+Screenshots:
+ * UOPClient
+ * CustomMAP
+
+UO Formats:
+ * StringDictionary
+ * Facets
+ * Sector
+ * Tileart
+ * MultiCollection
+ * Texture
+ * TerrainDefinition
+ * Waypoint
+ * AnimationSequence
+ * Effects
+ * Unknowns
