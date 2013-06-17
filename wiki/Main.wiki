@@ -1,5 +1,9 @@
 #summary Read me!
 #labels Featured
+
+*If you find what values in the various formats are for, please report it to me and i will update the informations.*
+
+
 = Preface =
 
 Hi all, if you already know this site this is probably for the Ultima Online Stygian Abyss loader i made (or the Reader).
