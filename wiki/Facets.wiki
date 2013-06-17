@@ -1,7 +1,6 @@
-
 = Introduction =
 
-Add your content here.
+This file use is currently unknown (inform me if you find what is for)
 
 = Inner Extension =
 {{{
