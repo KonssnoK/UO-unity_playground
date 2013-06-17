@@ -18,4 +18,6 @@ http://imageshack.us/a/img855/5462/uo15ec.png
 http://imageshack.us/a/img191/9374/uo17.png
 http://img23.imageshack.us/img23/3251/uo18.png
 http://imageshack.us/a/img209/9570/uo19.png
-Some mountain:
+Some mountain and forest with correct terrain texture:
+http://imageshack.us/a/img600/6338/fz6.png
+http://imageshack.us/a/img197/9283/r32f.png
