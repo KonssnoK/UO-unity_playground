@@ -5,6 +5,7 @@
  * [CustomMAP]
 
 *UO Formats*:
+ * [Mythic_Package]
  * [StringDictionary]
  * [Facets]
  * [Sector]
