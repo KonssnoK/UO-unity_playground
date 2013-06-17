@@ -1,5 +1,5 @@
 #summary How Ultima Online could be.
-#labels Featured
+#labels Featured,Deprecated
 
 = Screenshots =
 Those screenshots show how ultima online would be if people with a little passion were  working on it.
