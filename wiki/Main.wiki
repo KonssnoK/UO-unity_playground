@@ -20,3 +20,6 @@ what you will find in this wiki:
  * *Screenshots*: about what you can do with the information given by the formats.
  * *Formats*: How to load almost every type of file included in the Ultima Online's Mythic packages.
  * *Programs*: Description of the programs i made over time that were already here before this wiki.
+
+
+<- Use the side Menu on the left to navigate contents! 
