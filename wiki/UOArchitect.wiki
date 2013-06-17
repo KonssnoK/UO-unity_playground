@@ -2,18 +2,29 @@
 
 = UO:Architect v2.6.6mod-K =
 
-This is mine modified version of the popular UO:Architect.
-Focus was on the interface and ease of using, not on server.
+UO:Architect was a populare program used by UO builders.
+It was not enough for mine builders, so made some improvements (see the changelog).
 
-I'm sorry but i will not provide support for this program because i don't have any uo installation left.
+I'm sorry but i will not provide support for this program.
 
-This program IS NOT TESTED with HS expansion (it was created before.. :) )
+Notice: this program was released before HS expansion, so it's missing all the HS items.
+Notice2: to use this program with EC you need both EC and CC.
 
 *Download in the download section.*
 
 [http://img443.imageshack.us/img443/2825/clipboard01o.jpg]
 
 *Changelog:*
+
+_2.6.8_
+•Updated Classic client regkeys.
+•Updated Ultima DLL to work with latest classic clients.
+•This release has been personally verified by me, it works :) .
+
+_2.6.7_ x86
+•Updated enhanced client regkeys
+•Updated some ambiguos error.
+•Switched to .net 4 Client profile (should be the one with less requisites)
 
 _2.6.6_
   * Switched to framework 4 (default on VS2012)
