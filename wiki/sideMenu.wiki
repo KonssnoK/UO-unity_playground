@@ -21,3 +21,4 @@
  * [UOArchitect]
  * [UOReader]
  * [UOLoader]
+ * [Mul2Uop]
