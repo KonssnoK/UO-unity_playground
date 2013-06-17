@@ -1,23 +1,23 @@
 [Main]
 
-Screenshots:
- * UOPClient
- * CustomMAP
+*Screenshots*:
+ * [UOPClient]
+ * [CustomMAP]
 
-UO Formats:
- * StringDictionary
- * Facets
- * Sector
- * Tileart
- * MultiCollection
- * Texture
- * TerrainDefinition
- * Waypoint
- * AnimationSequence
- * Effects
- * Unknowns
+*UO Formats*:
+ * [StringDictionary]
+ * [Facets]
+ * [Sector]
+ * [Tileart]
+ * [MultiCollection]
+ * [Texture]
+ * [TerrainDefinition]
+ * [Waypoint]
+ * [AnimationSequence]
+ * [Effects]
+ * [Unknowns]
 
-Programs:
- * UO:Architect K-mod
- * UO:Reader
- * UO:SA loader
+*Programs*:
+ * [UO:Architect K-mod]
+ * [UO:Reader]
+ * [UO:SA loader]
