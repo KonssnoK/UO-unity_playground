@@ -1,6 +1,6 @@
-#summary v2.6.6mod-K.
+#summary v2.6.8 mod-K.
 
-= UO:Architect v2.6.6mod-K =
+= UO:Architect v2.6.8 mod-K =
 
 UO:Architect was a populare program used by UO builders.
 It was not enough for mine builders, so made some improvements (see the changelog).
