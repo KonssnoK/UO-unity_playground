@@ -16,6 +16,7 @@
  * [AnimationSequence]
  * [Effects]
  * [Unknowns]
+ * [AnimationFrame]
 
 *Programs*:
  * [UOArchitect]
