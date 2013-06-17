@@ -1,7 +1,6 @@
-
 = Description = 
 
-StringDictionary is the first uop loaded by the EC client.
+The string dictionary is the first uop loaded by the EC client.
 
 It contains strings used to get textures from UOP and many other things.
 
