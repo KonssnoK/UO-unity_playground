@@ -22,5 +22,5 @@
 *Programs*:
  * [UOArchitect]
  * [UOReader]
- * [UOLoader]
+ * [UOSALoader]
  * [Mul2Uop]
