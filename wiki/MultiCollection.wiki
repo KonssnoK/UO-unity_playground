@@ -1,7 +1,6 @@
-
 = Description =
 
-Add your content here.
+Multi Collection contains all the multis, which are a collection of tiles.
 
 = Inner Extension =
 {{{
