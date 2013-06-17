@@ -15,7 +15,7 @@ Notice2: to use this program with EC you need both EC and CC.
 [http://img443.imageshack.us/img443/2825/clipboard01o.jpg]
 
 *Changelog:*
-
+{{{
 _2.6.8_
 •Updated Classic client regkeys.
 •Updated Ultima DLL to work with latest classic clients.
@@ -47,7 +47,7 @@ _2.6.2_
   * New system to inform builder that tile will be put on higher level
   * Completely rewrited client-comunication code.
   * New toolbox design, 2 separated dragable items, fast searching in treeview completely redrawn on "Pandora's box v3.0" style.
- 
+ }}}
 
 This is an example of use:
 
