@@ -1,10 +1,10 @@
+#summary my effort to handle uop format with DirectX11.
 #labels Featured
-#my effort to handle uop format with DirectX11.
 
 = Introduction =
 
-Add your content here.
-
+This is what you can make with all the informations contained in this wiki.
+Sadly i know a few about DirectX (i am learning doing these renderings) so won't be able to give any usable program soon(not alone anyway).
 
 = Details =
 
