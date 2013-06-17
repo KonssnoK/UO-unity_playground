@@ -19,7 +19,7 @@
  * [Unknowns]
  * [AnimationFrame]
  * [LegacyTexture]
- * [Texture]
+ * [Texture_uop]
 
 *Programs*:
  * [UOArchitect]
