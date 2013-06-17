@@ -49,3 +49,5 @@ This and previous versions were developed by Koksi who didn't make any changelog
 
 
 [http://img142.imageshack.us/img142/3603/mul2uopec3.jpg]
+
+This program is not for release.
