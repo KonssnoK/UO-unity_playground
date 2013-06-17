@@ -16,3 +16,8 @@ UO Formats:
  * AnimationSequence
  * Effects
  * Unknowns
+
+Programs:
+ * UO:Architect K-mod
+ * UO:Reader
+ * UO:SA loader
