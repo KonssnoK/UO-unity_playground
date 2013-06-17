@@ -4,6 +4,7 @@
 = Introduction =
 
 This is what you can make with all the informations contained in this wiki.
+
 Sadly i know a few about DirectX (i am learning doing these renderings) so won't be able to give any usable program soon(not alone anyway).
 
 = Details =
