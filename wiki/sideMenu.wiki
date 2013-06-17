@@ -18,6 +18,6 @@
  * [Unknowns]
 
 *Programs*:
- * [UO:Architect K-mod]
- * [UO:Reader]
- * [UO:SA loader]
+ * [UOArchitect]
+ * [UOReader]
+ * [UOLoader]
