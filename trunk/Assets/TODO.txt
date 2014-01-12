@@ -1,0 +1,13 @@
+Milestone 0.1
+- Support for terrain
+- Terrain Z fix
+- Terrain texture UV fix
+- Sprite order fixing
+- Support for flipped textures
+- Support for legacy textures
+
+Milestone 0.2
+- Player drawing
+
+Future
+- Animation drawing
