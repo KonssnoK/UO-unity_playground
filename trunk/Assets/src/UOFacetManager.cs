@@ -6,6 +6,10 @@ using UOReader;
 using System.Threading;
 using System.Collections;
 
+///
+/// Kons - 2013/2014
+///
+
 namespace UOResources {
 	public class UOFacetManager {
 
@@ -14,6 +18,7 @@ namespace UOResources {
 			public float v;
 			public uvStatus(){}
 		}
+
 
 		public class facetSectorMesh{
 			public Vector3[] vertices;
@@ -34,6 +39,12 @@ namespace UOResources {
 		private static Dictionary<int, FacetSector> facetSectors = new Dictionary<int, FacetSector>();
 		private static Dictionary<uint, UOSprite> facetSprites = new Dictionary<uint, UOSprite>();
 
+		/// <summary>
+		/// Given coordinates returns the current sectorID
+		/// </summary>
+		/// <param name="x"></param>
+		/// <param name="y"></param>
+		/// <returns></returns>
 		public static int getSectorID(int x, int y) {
 			return (y / 64) + (x / 64) * 64; 
 		}
@@ -42,6 +53,12 @@ namespace UOResources {
 			return getSector(getSectorID(x, y));
 		}
 
+		/// <summary>
+		/// Get a FacetSector given an ID. FacetSector contains tile information about current block.
+		/// UOPs related.
+		/// </summary>
+		/// <param name="sector"></param>
+		/// <returns></returns>
 		public static FacetSector getSector(int sector) {
 			//Fast search
 			if(facetSectors.ContainsKey(sector))
@@ -74,6 +91,12 @@ namespace UOResources {
 		}
 
 		#region terrain
+		/// <summary>
+		/// MAIN THREAD
+		/// This function loads a sector and puts the resulting terrain mesh into a GameObject
+		/// </summary>
+		/// <param name="sectorID"></param>
+		/// <returns></returns>
 		public static GameObject buildTerrain(int sectorID) {
 			GameObject terrain = new GameObject("terrain" + sectorID);
 			MeshFilter mf = (MeshFilter)terrain.AddComponent(typeof(MeshFilter));
@@ -109,6 +132,12 @@ namespace UOResources {
 			return terrain;
 		}
 
+		/// <summary>
+		/// MAIN THREAD -> TODO : Separate loading from GameObjects.
+		/// Build the terrain mesh for the current sectorID
+		/// </summary>
+		/// <param name="fs"></param>
+		/// <returns></returns>
 		private static facetSectorMesh buildTerrainMesh(FacetSector fs) {
 			facetSectorMesh mesh = new facetSectorMesh();
 
@@ -221,52 +250,11 @@ namespace UOResources {
 		}
 		#endregion terrain
 
-		public static GameObject buildStatics(int sectorID) {
-			UOReader.FacetSector sec = UOFacetManager.getSector(sectorID);
-
-			GameObject sector = UOFacetManager.buildStaticsSprites(sec);
-
-			sector.transform.localScale *= 1.6525f;//Moving back from 64pixel based to 100pixel based
-			return sector;
-		}
-
-		private static GameObject buildStaticsSprites(FacetSector fs) {
-
-			GameObject sector = new GameObject(fs.sectorID.ToString() + " statics");
-			int totalStatics = 0;
-			int totalStaticsSingle = 0;
-
-			for (int x = 0; x < fs.tiles.Length; ++x) {
-				for (int y = 0; y < fs.tiles[x].Length; ++y) {
-					
-					if(fs.tiles[x][y].staticsCount <= 0)
-						continue;
-
-					for (int i = 0; i < fs.tiles[x][y].statics.Length; ++i) {
-						facetStatic_t st = fs.tiles[x][y].statics[i];
-
-						UOStatic si;
-						if (facetSprites.ContainsKey(st.graphic)) {
-							si = facetSprites[st.graphic] as UOStatic;
-						} else {
-						//if (!facetSprites.ContainsKey(st.graphic)) {
-							si = new UOStatic(st.graphic);
-							facetSprites.Add(st.graphic, si);
-							totalStaticsSingle++;
-						}
-
-						GameObject drawStatic = si.getDrawItem(x, y, st.z);
-						drawStatic.transform.parent = sector.transform;
-
-						totalStatics++;
-					}
-				}
-			}
-
-			UOConsole.Debug("LOADER: statics: {0} loaded, {1} uniques.", totalStatics, totalStaticsSingle);
-			return sector;
-		}
-
+		/// <summary>
+		/// LOADER THREAD
+		/// loads the sprites of a given sector to the faceSprites Dictionary
+		/// </summary>
+		/// <param name="sectorID"></param>
 		public static void loadSprites(int sectorID) {
 			int totalStatics = 0;//Just for info 
 			int totalStaticsSingle = 0;//Just for info
@@ -297,8 +285,19 @@ namespace UOResources {
 			return;
 		}
 
+		/// <summary>
+		/// Client sensing range for updating surrounding blocks
+		/// </summary>
 		public const int UPDATE_RANGE = 22;
 
+		/// <summary>
+		/// MAIN THREAD - Called each frame
+		/// Given a position updates the current block and the surrounding ones
+		/// - Get sectors IDs
+		/// - Enqueue loading to LOADER
+		/// - Updates visible blocks
+		/// </summary>
+		/// <param name="p"></param>
 		public static void updateMap(Position p) {
 
 			int currentSector = getSectorID(p.x, p.y);
@@ -363,8 +362,15 @@ namespace UOResources {
 			return;
 		}
 
+
 		public static graphicSector[] visibleMap = new graphicSector[5];
+		/// <summary>
+		/// Currently drawn sectors IDs. -1 = no drawing.
+		/// </summary>
 		public static int[] visibleMapIDX = new int[5] { -1, -1, -1, -1, -1 };
+		/// <summary>
+		/// GameObject containing the current facet
+		/// </summary>
 		public static GameObject theMap = new GameObject("facet");
 		public static GameObject[] statics = new GameObject[SectorsLoader.SECTORS_COUNT];
 		public static GameObject[] terrains = new GameObject[SectorsLoader.SECTORS_COUNT];
@@ -391,6 +397,9 @@ namespace UOResources {
 			}
 			#endregion
 
+			/// <summary>
+			/// True if we have loaded all the sprites contained in this sector
+			/// </summary>
 			public bool fullLoaded = false;
 			public GameObject terrain;
 			public GameObject[,][] goArray = new GameObject[64, 64][];
@@ -403,6 +412,11 @@ namespace UOResources {
 
 			}
 
+			/// <summary>
+			/// MAIN THREAD
+			/// load the already cached sprites into GameObjects. 
+			/// This function ignores not-yet loaded sprites.
+			/// </summary>
 			public void loadObjects() {
 				UOReader.FacetSector fs = UOFacetManager.getSector(sectorID);
 				int worldY = (fs.sectorID % 64) * 64;
@@ -457,11 +471,12 @@ namespace UOResources {
 				return;
 			}
 		}
-		
-
-		public const int DRAW_RANGE = 30;
 
 
+		/// <summary>
+		/// TO BE MOVED
+		/// Simply position class 
+		/// </summary>
 		public class Position{
 			public int x;
 			public int y;

@@ -24,6 +24,7 @@ namespace UOReader {
 		public facetStatic_t[] statics;
 	}
 
+
 	public class FacetSector {
 		public byte facetID;
 		public ushort sectorID;
