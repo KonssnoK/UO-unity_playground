@@ -1,0 +1,93 @@
+﻿using UnityEngine;
+using System.Collections;
+using UOResources;
+using System.Collections.Generic;
+
+public class UOGraphic : MonoBehaviour {
+
+	public List<GameObject> graphicObjects = new List<GameObject>();
+
+	// Use this for initialization
+	void Start () {
+		print("Starting UOP preload..");
+		UOResourceManager.loadUOPs();
+
+		//1367 is the britain cemetery
+		int sector = 1368;
+
+		GameObject mterrain = buildTerrain(sector);
+		GameObject mstatics = buildStatics(sector);
+		//GameObject.Instantiate(mterrain, new Vector3(0, 0, 0), Quaternion.identity);
+		//graphicObjects.Add(mterrain);
+		graphicObjects.Add(mstatics);
+	}
+	
+	// Update is called once per frame
+	void Update () {
+
+	}
+
+	private GameObject buildTerrain(int sectorID) {
+		GameObject terrain = new GameObject("terrain");
+		MeshFilter mf = (MeshFilter)terrain.AddComponent(typeof(MeshFilter));
+		MeshRenderer mr = (MeshRenderer)terrain.AddComponent(typeof(MeshRenderer));
+		MeshCollider mc = (MeshCollider)terrain.AddComponent(typeof(MeshCollider));
+
+		//TESTING - Load a facet sector
+		UOReader.FacetSector sec = UOFacetManager.getSector(sectorID);
+
+		//Set the data to a mesh
+		Mesh mesh = new Mesh();
+		UOFacetManager.facetSectorMesh m = UOFacetManager.buildTerrainMesh(sec);
+		//Copy values from the specific class.... i tried using directly a mesh but didn't worked..
+		mesh.vertices = m.vertices;
+		mesh.triangles = m.triangles;
+		mesh.normals = m.normals;
+		mesh.uv = m.uvs;
+		int i = 0;
+		mesh.subMeshCount = m.subMeshes.Values.Count;
+		UOErrors.consoleFATAL(string.Format("terrain: {0} subMeshes", mesh.subMeshCount));
+		foreach (uint k in m.subMeshes.Keys) {
+			//UOErrors.consoleFATAL(string.Format("idx {0} texture {1} count: {2}", i, k, m.subMeshes[k].Count));
+			mesh.SetTriangles(m.subMeshes[k].ToArray(), i++);
+		}
+
+		mf.mesh = mesh;
+		mr.materials = m.materials.ToArray();
+
+		float sq = Mathf.Sqrt(2.0f);
+		terrain.transform.Rotate(0, 0, -45.0f);
+		terrain.transform.localScale *= 1 / sq;
+		return terrain;
+	}
+
+	private GameObject buildStatics(int sectorID) {
+		GameObject statics = new GameObject("statics");
+		MeshFilter mf = (MeshFilter)statics.AddComponent(typeof(MeshFilter));
+		MeshRenderer mr = (MeshRenderer)statics.AddComponent(typeof(MeshRenderer));
+		MeshCollider mc = (MeshCollider)statics.AddComponent(typeof(MeshCollider));
+
+		//TESTING - Load a facet sector
+		UOReader.FacetSector sec = UOFacetManager.getSector(sectorID);
+
+		Mesh mesh = new Mesh();
+		UOFacetManager.staticsSectorMesh m = UOFacetManager.buildStaticsMesh(sec);
+		//Copy values from the specific class.... i tried using directly a mesh but didn't worked..
+		mesh.vertices = m.vertices;
+		mesh.triangles = m.triangles;
+		mesh.normals = m.normals;
+		mesh.uv = m.uvs;
+		int i = 0;
+		mesh.subMeshCount = m.subMeshes.Values.Count;
+		UOErrors.consoleFATAL(string.Format("statics: {0} subMeshes", mesh.subMeshCount));
+		foreach (uint k in m.subMeshes.Keys) {
+			//UOErrors.consoleFATAL(string.Format("idx {0} graphic {1} count: {2}", i, k, m.subMeshes[k].Count));
+			mesh.SetTriangles(m.subMeshes[k].ToArray(), i++);
+		}
+
+		mf.mesh = mesh;
+		mr.materials = m.materials.ToArray();
+
+		return statics;
+	}
+}

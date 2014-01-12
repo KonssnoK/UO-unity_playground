@@ -1,0 +1,17 @@
+C:\Users\K\Documents\TileMap\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
+E:\Dropbox\Unity\TileMap\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.pdb
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Mythic.Package.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\System.Drawing.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\UnityEditor.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\UnityEngine.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Mono.Cecil.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\nunit.framework.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Unity.DataContract.dll
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\ICSharpCode.NRefactory.dll
+E:\Dropbox\Unity\TileMapSprite\obj\Debug\Assembly-CSharp.dll
+E:\Dropbox\Unity\TileMapSprite\obj\Debug\Assembly-CSharp.pdb
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.dll.CodeAnalysisLog.xml
+E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.dll.lastcodeanalysissucceeded
+E:\Dropbox\Unity\TileMapSprite\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
