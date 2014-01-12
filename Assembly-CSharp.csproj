@@ -5,7 +5,7 @@
 	<Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
 	<ProductVersion>10.0.20506</ProductVersion>
 	<SchemaVersion>2.0</SchemaVersion>
-	<ProjectGuid>{725BEE9F-2442-163F-1B2D-175371729B1A}</ProjectGuid>
+	<ProjectGuid>{CF7C86EF-0001-4435-B945-DF078988D202}</ProjectGuid>
 	<OutputType>Library</OutputType>
 	<AppDesignerFolder>Properties</AppDesignerFolder>
 	<RootNamespace></RootNamespace>
@@ -69,6 +69,7 @@
      <Compile Include="Assets\src\Utils\DDSImage.cs" />
      <Compile Include="Assets\src\Utils\UOConsole.cs" />
      <Compile Include="Assets\tilemap.cs" />
+     <None Include="Assets\TODO.txt" />
  <Reference Include="Mythic.Package">
  <HintPath>Assets\UOPs\Mythic.Package.dll</HintPath>
  </Reference>
