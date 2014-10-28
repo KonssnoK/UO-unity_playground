@@ -1,12 +1,30 @@
 #summary Or how i made a local server for Shroud of the Avatar.
 
-So, Shroud of the Avatar should be the next Ultima Online.
+Shroud of the Avatar should be the next generation Ultima Online.
+So i thought to my self: "Does it support Customized Servers?"
+
+The answer is: obviously yes.
+
+The game is still in pre-alpha, so a lot will change before it will be made playable, but the core won't probably change.
+
+I started digging by looking through the game files.
+SotA is being developed using Unity, so C#.. 
+How convenient ;) (RunUO anybody?).
+
+Attached you can see screenshots of my first login on local server.
+
+Please notice my code does not use any DB (yet?), so the code is static and just written to reach logged state.
 
 = ScreenShots =
 
 http://s16.postimg.org/xtvq09p11/Start.png
+
 http://s16.postimg.org/fpspfmrcl/Character.png
+
 http://s16.postimg.org/va03661h1/loading.png
+
 http://s16.postimg.org/m7blz51px/Login.png
+
 http://s16.postimg.org/xky5acc8l/Login2.png
+
 http://s16.postimg.org/ke8patgj9/Login3.png
