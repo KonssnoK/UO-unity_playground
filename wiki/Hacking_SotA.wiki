@@ -1,0 +1,12 @@
+#summary Or how i made a local server for Shroud of the Avatar.
+
+So, Shroud of the Avatar should be the next Ultima Online.
+
+= ScreenShots =
+
+http://s16.postimg.org/xtvq09p11/Start.png
+http://s16.postimg.org/fpspfmrcl/Character.png
+http://s16.postimg.org/va03661h1/loading.png
+http://s16.postimg.org/m7blz51px/Login.png
+http://s16.postimg.org/xky5acc8l/Login2.png
+http://s16.postimg.org/ke8patgj9/Login3.png
