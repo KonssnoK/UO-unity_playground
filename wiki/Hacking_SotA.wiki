@@ -2,7 +2,8 @@
 #labels Featured
 
 Shroud of the Avatar should be the next generation Ultima Online.
-So i thought to my self: "Does it support Customized Servers?"
+
+So i thought to myself: "Does it support Customized Servers?"
 
 The answer is: obviously yes.
 
@@ -12,18 +13,19 @@ I started digging by looking through the game files.
 SotA Client is being developed using Unity, so C#.. 
 How convenient ;) (RunUO anybody?).
 
-The core file for client handling is CSharp-Assembly.dll
+The core file for client handling is CSharp-Assembly.dll.
+
 Talking about making a server we need to know how packets are sent through the net.
 
 I first looked inside the exe, finding references to a C++ Dll but that was a dead end.
-Networking is being made in C# too, using the Photon3 for Unity.
+Networking is being made in C# too, using the Photon3 library for Unity.
 https://www.exitgames.com/en/PUN
 
-So if the client is using Photon the server should be Photon compatible..
+So if the client is using Photon the server should be Photon compatible...
 Exactly.
 
 The SotA serverS are based on the Photon Server LoadBalancing example.
-I wrote serverS because the server is splitted into multiple instances.
+I wrote "serverS" because the server is splitted into multiple instances.
 
 We have:
 - Master Server: This server handles connection, authentication and lobby joining (unique)
@@ -36,7 +38,7 @@ We have:
 
 - Metrics Server: This server is a feedback server for your client. It does not require authentication and will provide informations about you client state/exceptions and your hardware
 
-I started looking into "how to avoid using Photon Server" but then i got bored, too much work to do just to test something like that.
+I started looking into "how to avoid using Photon Server" but then i got bored, too much work to do just to test something like what i had in mind.
 
 PhotonServer is free to be downloaded and with a free licence you can accept up to 100 connections.. 
 it's enough to start.
