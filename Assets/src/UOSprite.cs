@@ -18,20 +18,17 @@ namespace UOResources {
 		private Sprite drawSprite = null;
 		public Tileart tileart = null;
 		//public GameObject gameObject = null;
+		private TileartImageOffset _imageOffset;
 
 		public UOSprite(uint spriteID) {
 
 			tileart = UOResourceManager.getTileart(spriteID);
+			resource = UOResourceManager.getResource(tileart);
 
-			if (tileart.textures[0].texturePresent == 1) {
-				resource = UOResourceManager.getResource(tileart.textures[0].texturesArray[0]);
-			} /*else if (tileart.textures[1].texturePresent == 1) {
-				resource = UOResourceManager.getLegacyResource(tileart.textures[1].texturesArray[0]);
-			} */else {
-				UOConsole.Fatal("texture is not present {0}", tileart.id);
-				tileart = UOResourceManager.getTileart(1);
-				resource = UOResourceManager.getResource(tileart.textures[0].texturesArray[0]);
-			}
+			if (resource.isLegacy) {
+				_imageOffset = tileart.offset2D;
+			} else
+				_imageOffset = tileart.offsetEC;
 
 			_drawOffsetX = tileart.offsetEC.offX / UOEC_SIZE;
 			_drawOffsetY = tileart.offsetEC.offY / UOEC_SIZE;
@@ -43,21 +40,29 @@ namespace UOResources {
 
 		//This function should never return null
 		public virtual GameObject getDrawItem(int x, int y, int z, int worldX, int worldY, int drawLayer) {
-			float width = tileart.offsetEC.Xend - tileart.offsetEC.Xstart;
-			float height = tileart.offsetEC.Yend;// +tileart.offsetEC.Ystart;
+			if (resource == null)
+				return new GameObject(tileart.id.ToString());
+
+			float width,height;
+			width = _imageOffset.Xend - _imageOffset.Xstart;
+			height = _imageOffset.Yend;// _imageOffset.Ystart;
+			
 
 			bool flipped = false;//TEMP - to move at load
+
 			if (width == 0) {
-				//UOConsole.Debug("width {0}, height {1}", width, height);
+				string tow = "", tow2 = "";
+				for (int i = 0; i < tileart.textures[0].texturesCount; ++i) {
+					tow += tileart.textures[0].texturesArray[i].unk6 + " ";
+					tow2 += tileart.textures[0].texturesArray[i].unk7 + " ";
+				}
+				UOConsole.Debug("id {0}, width {1} height {2} unk6 {3} unk7 {4}", tileart.id, width, height, tow, tow2);
 				width = height = 64;
 				flipped = true;
 			}
 
-			if (resource == null)//Not all texture are correctly named in texture.uop, We should check also in legacyTextures.uop - TODO
-				return new GameObject(tileart.id.ToString());
-
 			drawSprite = Sprite.Create(resource.getTexture(),
-							new Rect(tileart.offsetEC.Xstart, resource.getTexture().height - tileart.offsetEC.Yend,
+							new Rect(_imageOffset.Xstart, resource.getTexture().height - _imageOffset.Yend,
 										width, height),
 							new Vector2(0, 0)
 						);

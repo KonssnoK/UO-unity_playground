@@ -15,3 +15,5 @@ E:\Dropbox\Unity\TileMapSprite\obj\Debug\Assembly-CSharp.pdb
 E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.dll.CodeAnalysisLog.xml
 E:\Dropbox\Unity\TileMapSprite\Temp\bin\Debug\Assembly-CSharp.dll.lastcodeanalysissucceeded
 E:\Dropbox\Unity\TileMapSprite\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
+E:\Dropbox\Unity\KC\obj\Debug\Assembly-CSharp-vs.csprojResolveAssemblyReference.cache
+E:\Dropbox\Unity\KC\obj\Debug\Assembly-CSharp.dll

@@ -355,7 +355,7 @@ namespace UOResources {
 						graphicSectors[visibleMapIDX[i]] = visibleMap[i];
 					}
 					if (!visibleMap[i].fullLoaded) {
-						visibleMap[i].loadObjects();
+						visibleMap[i].loadObjects(p);
 					}
 				}
 			}
@@ -417,7 +417,7 @@ namespace UOResources {
 			/// load the already cached sprites into GameObjects. 
 			/// This function ignores not-yet loaded sprites.
 			/// </summary>
-			public void loadObjects() {
+			public void loadObjects(Position p) {
 				UOReader.FacetSector fs = UOFacetManager.getSector(sectorID);
 				int worldY = (fs.sectorID % 64) * 64;
 				int worldX = (fs.sectorID / 64) * 64;
@@ -434,6 +434,10 @@ namespace UOResources {
 				for (int x = 0; x < fs.tiles.Length; ++x) {
 					for (int y = 0; y < fs.tiles[x].Length; ++y) {
 
+						if (Mathf.Abs(worldX + x - p.x) > UPDATE_RANGE || Mathf.Abs(worldY + y - p.y) > UPDATE_RANGE) {
+							needsAnotherRun = true;
+							continue;
+						}
 						if (fs.tiles[x][y].staticsCount <= 0)
 							continue;
 

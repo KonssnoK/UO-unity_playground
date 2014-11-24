@@ -4,6 +4,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 namespace UOResources {
+
+#pragma warning disable 618
 	public static class UOConsole {
 		[DllImport("kernel32.dll",
 			EntryPoint = "GetStdHandle",
@@ -26,7 +28,7 @@ namespace UOResources {
 			CallingConvention = CallingConvention.StdCall)]
 		private static extern int FreeConsole();
 
-		private const int MY_CODE_PAGE = 437;
+		//private const int MY_CODE_PAGE = 437;
 		private const int STD_OUTPUT_HANDLE = -11;
 
 		private static TextReader unityStreamIn;
@@ -41,8 +43,10 @@ namespace UOResources {
 			unityEncodingOut = Console.OutputEncoding;
 			AllocConsole();
 			IntPtr stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+			
 			FileStream fileStream = new FileStream(stdHandle, FileAccess.Write);
-			Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
+			//Encoding encoding = System.Text.Encoding.GetEncoding(MY_CODE_PAGE);
+			Encoding encoding = System.Text.Encoding.ASCII;
 			StreamWriter standardOutput = new StreamWriter(fileStream, encoding);
 			standardOutput.AutoFlush = true;
 			Console.SetOut(standardOutput);

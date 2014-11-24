@@ -20,8 +20,13 @@ namespace UOResources {
 		private Material material = null;
 		private string stype;
 		uint references;//todo
+		public bool isLegacy;
 
-		public UOResource(byte[] raw, ShaderTypes type) {
+		public UOResource(byte[] raw, ShaderTypes type) :
+			this(raw, type, false) {
+		}
+
+		public UOResource(byte[] raw, ShaderTypes type, bool _isLegacy) {
 			DDSImage img = new DDSImage(raw);
 			_ddsData.width = img.images[0].Width;
 			_ddsData.height = img.images[0].Height;
