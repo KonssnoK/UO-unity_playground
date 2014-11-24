@@ -42,6 +42,7 @@ namespace UOResources {
 			public Dictionary<ulong, uopMapping_t> textureHashes;//texture.uop
 			public Dictionary<ulong, uopMapping_t> terrainHashes;//TerrainDefinition.uop
 			public Dictionary<ulong, uopMapping_t> facet0Hashes;//facet0.uop
+			public Dictionary<ulong, uopMapping_t> legacyTexturesHashes;//LegacyTexture.uop
 		};
 
 		public static uopHashes_t uopHashes;
@@ -59,10 +60,10 @@ namespace UOResources {
 
 		//Preload all hashes
 		public static bool loadUOPs(){
-			MythicPackage sd = new MythicPackage(fileDirectory + "string_dictionary.uop");
-	
-			byte[] data = sd.Blocks[0].Files[0].Unpack(sd.FileInfo.FullName);
 
+			//Load the string dictionary data
+			MythicPackage sd = new MythicPackage(fileDirectory + "string_dictionary.uop");
+			byte[] data = sd.Blocks[0].Files[0].Unpack(sd.FileInfo.FullName);
 			using (MemoryStream fs = new MemoryStream(data)) {
 				using (BinaryReader r = new BinaryReader(fs)) {
 					stringDictionary.unk64 = r.ReadUInt64();
@@ -102,6 +103,7 @@ namespace UOResources {
 			uopHashes.textureHashes = new Dictionary<ulong, uopMapping_t>();
 			uopHashes.terrainHashes = new Dictionary<ulong, uopMapping_t>();
 			uopHashes.facet0Hashes = new Dictionary<ulong, uopMapping_t>();
+			uopHashes.legacyTexturesHashes = new Dictionary<ulong, uopMapping_t>();
 
 			MythicPackage _uop = new MythicPackage(fileDirectory + "tileart.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
@@ -131,14 +133,45 @@ namespace UOResources {
 				}
 			}
 
+			_uop = new MythicPackage(fileDirectory + "LegacyTexture.uop");
+			for (int i = 0; i < _uop.Blocks.Count; ++i) {
+				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
+					uopHashes.legacyTexturesHashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
+				}
+			}
+
 			return true;
 		}
 
 		//Get a resource given an id
 		// the id is coming from	TILEART -> TEXTURES 
 		//					or		TERRAINDEF -> TEXTURES
-		public static UOResource getResource(TextureImageInfo tileartTextureInfo){
-			return getResource(tileartTextureInfo, ShaderTypes.Sprite);
+		public static UOResource getResource( Tileart tileart ){
+
+			UOResource resource = null;
+
+			//WorldArt Texture
+			if (tileart.textures[0].texturePresent == 1) {
+				resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
+			} 
+			//LegacyTexture
+			if (resource == null && tileart.textures[1].texturePresent == 1) {
+				resource = getLegacyResource(tileart.textures[1].texturesArray[0]);
+			} 
+			//EnhancedTexture
+			//Is this really necessary?
+			//Light Texture
+			if (resource != null && tileart.textures[3].texturePresent == 1) {
+				//TODO: light texture load
+			}
+			//
+			if (resource == null){
+				UOConsole.Fatal("texture is not present {0}", tileart.id);
+				tileart = UOResourceManager.getTileart(1);
+				resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
+			}
+
+			return resource;
 		}
 
 		public static UOResource getResource(TextureImageInfo tileartTextureInfo, ShaderTypes stype) {
@@ -184,7 +217,7 @@ namespace UOResources {
 			return res;
 		}
 
-		//Do not use - Incomplete
+		
 		public static UOResource getLegacyResource(TextureImageInfo tileartTextureInfo) {
 			//FAST search
 			if (legacyTextures.ContainsKey(tileartTextureInfo.textureIDX)) {
@@ -208,23 +241,26 @@ namespace UOResources {
 				end = tga.Length;
 			}
 			//UOConsole.Fatal("{0} {1} {2}", tga, start, end);
-			string toHash = tga.Substring(start, end - start) + ".dds";
+			string toHash = tga.Substring(start, end - start);
+			while(toHash.Length < 8)//Filling the missing zeros
+				toHash = "0" + toHash;
+			toHash += ".dds";
 			toHash = toHash.ToLower();
-			toHash = "build/worldart/" + toHash;
+			toHash = "build/tileartlegacy/" + toHash;
 
 			//Get the file from Texture.uop
 			ulong tehHash = HashDictionary.HashFileName(toHash);
-			if (!uopHashes.textureHashes.ContainsKey(tehHash)) {
-				UOConsole.Fatal("string {0} not found in textureHashes - tga: {1}", toHash, tga);
+			if (!uopHashes.legacyTexturesHashes.ContainsKey(tehHash)) {
+				UOConsole.Fatal("string {0} not found in legacyTextureHashes - tga: {1}", toHash, tga);
 				return null;
 			}
 
-			uopMapping_t map = uopHashes.textureHashes[tehHash];
-			MythicPackage tex = new MythicPackage(fileDirectory + "texture.uop");
+			uopMapping_t map = uopHashes.legacyTexturesHashes[tehHash];
+			MythicPackage tex = new MythicPackage(fileDirectory + "LegacyTexture.uop");
 			byte[] raw = tex.Blocks[map.block].Files[map.file].Unpack(tex.FileInfo.FullName);
-			UOResource res = new UOResource(raw, ShaderTypes.Sprite);
+			UOResource res = new UOResource(raw, ShaderTypes.Sprite, true);
 
-			textures.Add(tileartTextureInfo.textureIDX, res);
+			legacyTextures.Add(tileartTextureInfo.textureIDX, res);
 			return res;
 		}
 

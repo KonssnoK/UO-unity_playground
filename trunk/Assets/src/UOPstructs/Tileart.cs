@@ -16,24 +16,12 @@ namespace UOReader {
 			Xstart = imgoff[0];
 			Ystart = imgoff[1];
 			Xend = imgoff[2];
-			if (Xend == 0)
-				Xend = imgoff[3];
 			Yend = imgoff[3];
 			offX = imgoff[4];
 			offY = imgoff[5];
 
 			Width = Xend - Xstart;
 			Height = Yend - Ystart;
-
-			/*			t.offset2D.Xstart = t.imgoff2D[0];
-			t.offset2D.Ystart = t.imgoff2D[1];
-			t.offset2D.Xend = t.imgoff2D[2];
-			t.offset2D.Yend = t.imgoff2D[3];
-			t.offset2D.offX = t.imgoff2D[4];
-			t.offset2D.offY = t.imgoff2D[5];
-
-			t.offset2D.Width = t.offset2D.Xend - t.offset2D.Xstart;
-			t.offset2D.Height = t.offset2D.Yend - t.offset2D.Ystart;*/
 		}
 	}
 

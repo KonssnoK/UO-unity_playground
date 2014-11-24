@@ -8,7 +8,7 @@ namespace UOReader {
 	public class TextureImageInfo{
 		public uint textureIDX; //String dictionary index of the texture path
 		public byte unk4;
-		public float repetition;
+		public float repetition;//How many times the texture should be replicated in a single image
 		public int unk6;
 		public int unk7;
 		public TextureImageInfo() {
