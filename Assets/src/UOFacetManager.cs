@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using Mythic.Package;
 using UnityEngine;
@@ -36,8 +37,8 @@ namespace UOResources {
 		private const string fileDirectory = "Assets\\UOPs\\";
 
 
-		private static Dictionary<int, FacetSector> facetSectors = new Dictionary<int, FacetSector>();
-		private static Dictionary<uint, UOSprite> facetSprites = new Dictionary<uint, UOSprite>();
+		private static ConcurrentDictionary<int, FacetSector> facetSectors = new ConcurrentDictionary<int, FacetSector>();
+		private static ConcurrentDictionary<uint, UOSprite> facetSprites = new ConcurrentDictionary<uint, UOSprite>();
 
 		/// <summary>
 		/// Given coordinates returns the current sectorID
@@ -61,8 +62,8 @@ namespace UOResources {
 		/// <returns></returns>
 		public static FacetSector getSector(int sector) {
 			//Fast search
-			if(facetSectors.ContainsKey(sector))
-				return facetSectors[sector];
+			if(facetSectors.TryGetValue(sector, out FacetSector cached))
+				return cached;
 
 			int currentFacet = 0;
 			//Look for the file in facet hashes
@@ -75,7 +76,7 @@ namespace UOResources {
 			}
 			UOResourceManager.uopMapping_t map = UOResourceManager.uopHashes.facet0Hashes[hash];
 
-			MythicPackage _uop = new MythicPackage(fileDirectory + "facet0.uop");
+			MythicPackage _uop = MythicPackageCache.Get(fileDirectory + "facet0.uop");
 			byte[] raw = _uop.Blocks[map.block].Files[map.file].Unpack(_uop.FileInfo.FullName);
 
 			FacetSector fs;
@@ -86,7 +87,7 @@ namespace UOResources {
 				}
 			}
 
-			facetSectors[sector] = fs;
+			facetSectors.TryAdd(sector, fs);
 			return fs;
 		}
 
@@ -271,14 +272,19 @@ namespace UOResources {
 						facetStatic_t st = fs.tiles[x][y].statics[i];
 
 						if (!facetSprites.ContainsKey(st.graphic)) {
-							facetSprites.Add(st.graphic, new UOStatic(st.graphic));
-							totalStaticsSingle++;
+							if (facetSprites.TryAdd(st.graphic, new UOStatic(st.graphic)))
+								totalStaticsSingle++;
 						}
 
 						totalStatics++;
 					}
 				}
 			}
+
+			// Preload terrain texture IDs on background thread so buildTerrainMesh() hits cache
+			for (int x2 = 0; x2 < fs.tiles.Length; ++x2)
+				for (int y2 = 0; y2 < fs.tiles[x2].Length; ++y2)
+					UOResourceManager.getLandtileTextureID(fs.tiles[x2][y2].landtileGraphic);
 
 			UOConsole.Debug("LOADER: instanced {0} statics, based on {1} uniques.", totalStatics, totalStaticsSingle);
 
@@ -453,7 +459,7 @@ namespace UOResources {
 									UOStatic si = facetSprites[st.graphic] as UOStatic;
 
 									if (si == null) {
-										facetSprites.Remove(st.graphic);
+										facetSprites.TryRemove(st.graphic, out _);
 										UOConsole.Fatal("UPDATE: Removing {0} cause it's null", st.graphic);
 									}
 

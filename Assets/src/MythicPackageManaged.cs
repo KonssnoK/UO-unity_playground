@@ -184,4 +184,21 @@ namespace Mythic.Package {
 			return ((ulong)esi << 32) | eax;
 		}
 	}
+
+	public static class MythicPackageCache {
+		private static Dictionary<string, MythicPackage> _cache = new Dictionary<string, MythicPackage>();
+
+		public static MythicPackage Get(string filePath) {
+			string key = Path.GetFullPath(filePath).ToLowerInvariant();
+			if (!_cache.TryGetValue(key, out MythicPackage pkg)) {
+				pkg = new MythicPackage(filePath);
+				_cache[key] = pkg;
+			}
+			return pkg;
+		}
+
+		public static void Clear() {
+			_cache.Clear();
+		}
+	}
 }

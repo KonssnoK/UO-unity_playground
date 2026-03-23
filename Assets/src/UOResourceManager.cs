@@ -1,4 +1,5 @@
 ﻿using Mythic.Package;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -49,20 +50,20 @@ namespace UOResources {
 		//Contains all known string ID and relative string
 		private static stringDictionary_t stringDictionary;
 		//Used for FAST already loaded textures reading
-		private static Dictionary<uint, UOResource> textures = new Dictionary<uint,UOResource>();
-		private static Dictionary<uint, UOResource> legacyTextures = new Dictionary<uint, UOResource>();
+		private static ConcurrentDictionary<uint, UOResource> textures = new ConcurrentDictionary<uint,UOResource>();
+		private static ConcurrentDictionary<uint, UOResource> legacyTextures = new ConcurrentDictionary<uint, UOResource>();
 		//Given a landtile legacy ID returns a texture ID
-		private static Dictionary<uint, TextureImageInfo> landtiles = new Dictionary<uint, TextureImageInfo>();
+		private static ConcurrentDictionary<uint, TextureImageInfo> landtiles = new ConcurrentDictionary<uint, TextureImageInfo>();
 		//legacyterrainmap -> given a legacy landtile id, returns a struct
 		private static Dictionary<uint, legacyTerrainMap_t> legacyTerrainMap = new Dictionary<uint, legacyTerrainMap_t>();
 		//tileart
-		private static Dictionary<uint, Tileart> tileartCollection = new Dictionary<uint, Tileart>();
+		private static ConcurrentDictionary<uint, Tileart> tileartCollection = new ConcurrentDictionary<uint, Tileart>();
 
 		//Preload all hashes
 		public static bool loadUOPs(){
 
 			//Load the string dictionary data
-			MythicPackage sd = new MythicPackage(fileDirectory + "string_dictionary.uop");
+			MythicPackage sd = MythicPackageCache.Get(fileDirectory + "string_dictionary.uop");
 			byte[] data = sd.Blocks[0].Files[0].Unpack(sd.FileInfo.FullName);
 			using (MemoryStream fs = new MemoryStream(data)) {
 				using (BinaryReader r = new BinaryReader(fs)) {
@@ -105,35 +106,35 @@ namespace UOResources {
 			uopHashes.facet0Hashes = new Dictionary<ulong, uopMapping_t>();
 			uopHashes.legacyTexturesHashes = new Dictionary<ulong, uopMapping_t>();
 
-			MythicPackage _uop = new MythicPackage(fileDirectory + "tileart.uop");
+			MythicPackage _uop = MythicPackageCache.Get(fileDirectory + "tileart.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
 				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
 					uopHashes.tileartHashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
 				}
 			}
 
-			_uop = new MythicPackage(fileDirectory + "Texture.uop");
+			_uop = MythicPackageCache.Get(fileDirectory + "Texture.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
 				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
 					uopHashes.textureHashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
 				}
 			}
 
-			_uop = new MythicPackage(fileDirectory + "TerrainDefinition.uop");
+			_uop = MythicPackageCache.Get(fileDirectory + "TerrainDefinition.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
 				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
 					uopHashes.terrainHashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
 				}
 			}
 
-			_uop = new MythicPackage(fileDirectory + "facet0.uop");
+			_uop = MythicPackageCache.Get(fileDirectory + "facet0.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
 				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
 					uopHashes.facet0Hashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
 				}
 			}
 
-			_uop = new MythicPackage(fileDirectory + "LegacyTexture.uop");
+			_uop = MythicPackageCache.Get(fileDirectory + "LegacyTexture.uop");
 			for (int i = 0; i < _uop.Blocks.Count; ++i) {
 				for (int j = 0; j < _uop.Blocks[i].Files.Count; ++j) {
 					uopHashes.legacyTexturesHashes.Add(_uop.Blocks[i].Files[j].FileHash, new uopMapping_t(i, j));
@@ -181,9 +182,8 @@ namespace UOResources {
 
 		public static UOResource getResource(TextureImageInfo tileartTextureInfo, ShaderTypes stype) {
 			//FAST search
-			if (textures.ContainsKey(tileartTextureInfo.textureIDX)) {
-				//TODO: references++
-				return textures[tileartTextureInfo.textureIDX];
+			if (textures.TryGetValue(tileartTextureInfo.textureIDX, out UOResource cachedTex)) {
+				return cachedTex;
 			}
 
 			//Get the string from stringDictionary
@@ -214,20 +214,19 @@ namespace UOResources {
 			}
 
 			uopMapping_t map = uopHashes.textureHashes[tehHash];
-			MythicPackage tex = new MythicPackage(fileDirectory + "texture.uop");
+			MythicPackage tex = MythicPackageCache.Get(fileDirectory + "texture.uop");
 			byte[] raw = tex.Blocks[map.block].Files[map.file].Unpack(tex.FileInfo.FullName);
 			UOResource res = new UOResource(raw, stype);
 
-			textures.Add(tileartTextureInfo.textureIDX, res);
+			textures.TryAdd(tileartTextureInfo.textureIDX, res);
 			return res;
 		}
 
 		
 		public static UOResource getLegacyResource(TextureImageInfo tileartTextureInfo) {
 			//FAST search
-			if (legacyTextures.ContainsKey(tileartTextureInfo.textureIDX)) {
-				//TODO: references++
-				return legacyTextures[tileartTextureInfo.textureIDX];
+			if (legacyTextures.TryGetValue(tileartTextureInfo.textureIDX, out UOResource cachedLeg)) {
+				return cachedLeg;
 			}
 
 			//Get the string from stringDictionary
@@ -261,19 +260,19 @@ namespace UOResources {
 			}
 
 			uopMapping_t map = uopHashes.legacyTexturesHashes[tehHash];
-			MythicPackage tex = new MythicPackage(fileDirectory + "LegacyTexture.uop");
+			MythicPackage tex = MythicPackageCache.Get(fileDirectory + "LegacyTexture.uop");
 			byte[] raw = tex.Blocks[map.block].Files[map.file].Unpack(tex.FileInfo.FullName);
 			UOResource res = new UOResource(raw, ShaderTypes.Sprite, true);
 
-			legacyTextures.Add(tileartTextureInfo.textureIDX, res);
+			legacyTextures.TryAdd(tileartTextureInfo.textureIDX, res);
 			return res;
 		}
 
 		//Land tiles does not have tileart TEXTURES section.. we need to extract them from terrain definition
 		public static TextureImageInfo getLandtileTextureID(uint legacyLandtileID){
 			//Fast search
-			if(landtiles.ContainsKey(legacyLandtileID)){
-				return landtiles[legacyLandtileID];
+			if(landtiles.TryGetValue(legacyLandtileID, out TextureImageInfo cachedLand)){
+				return cachedLand;
 			}
 
 			//Translate the legacy ID to the new pair newID-subtype using legacyterrainMap
@@ -292,7 +291,7 @@ namespace UOResources {
 			}
 			uopMapping_t pos = uopHashes.terrainHashes[hash];
 
-			MythicPackage _uop = new MythicPackage(fileDirectory + "TerrainDefinition.uop");
+			MythicPackage _uop = MythicPackageCache.Get(fileDirectory + "TerrainDefinition.uop");
 			byte[] raw = _uop.Blocks[pos.block].Files[pos.file].Unpack(_uop.FileInfo.FullName);
 
 			//Read the loaded terrainDefinition file.
@@ -307,7 +306,7 @@ namespace UOResources {
 				return null;
 			}
 
-			landtiles[legacyLandtileID] = td.textures.texturesArray[landtileID.newSubtype];
+			landtiles.TryAdd(legacyLandtileID, td.textures.texturesArray[landtileID.newSubtype]);
 
 			//Returns the texture according to subtype
 			return td.textures.texturesArray[landtileID.newSubtype];
@@ -316,8 +315,8 @@ namespace UOResources {
 		//Get a tileart given a graphic id
 		public static Tileart getTileart(uint graphic) {
 			//Fast search
-			if (tileartCollection.ContainsKey(graphic)) {
-				return tileartCollection[graphic];
+			if (tileartCollection.TryGetValue(graphic, out Tileart cachedTa)) {
+				return cachedTa;
 			}
 
 			//Get the file from tileart using the id
@@ -329,7 +328,7 @@ namespace UOResources {
 			}
 			uopMapping_t pos = uopHashes.tileartHashes[hash];
 
-			MythicPackage _uop = new MythicPackage(fileDirectory + "tileart.uop");
+			MythicPackage _uop = MythicPackageCache.Get(fileDirectory + "tileart.uop");
 			byte[] raw = _uop.Blocks[pos.block].Files[pos.file].Unpack(_uop.FileInfo.FullName);
 
 			//Read the loaded tileart file.
@@ -344,7 +343,7 @@ namespace UOResources {
 				return t;
 			}
 
-			tileartCollection[graphic] = t;
+			tileartCollection.TryAdd(graphic, t);
 
 			//Returns the texture according to subtype
 			return t;
