@@ -126,7 +126,8 @@ namespace UOReader {
 				t.textures[3] = TextureInfo.readTextureInfo(r);//New Format
 				//9_8
 				ReadEffects(t,r);
-			} catch {
+			} catch (System.Exception ex) {
+				UOConsole.Debug("Tileart {0} parse incomplete: {1}", t.id, ex.Message);
 			}
 			return t;
 		}

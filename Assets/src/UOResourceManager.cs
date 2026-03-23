@@ -165,15 +165,22 @@ namespace UOResources {
 			if (resource == null && tileart.textures[1] != null && tileart.textures[1].texturePresent == 1) {
 				resource = getLegacyResource(tileart.textures[1].texturesArray[0]);
 			}
-			//EnhancedTexture
-			//Is this really necessary?
+			//EnhancedTexture — needed for water statics and other items without WorldArt/Legacy
+			if (resource == null && tileart.textures[2] != null && tileart.textures[2].texturePresent == 1) {
+				resource = getResource(tileart.textures[2].texturesArray[0], ShaderTypes.Sprite);
+			}
 			//Light Texture
 			if (resource != null && tileart.textures[3] != null && tileart.textures[3].texturePresent == 1) {
 				//TODO: light texture load
 			}
 			//
 			if (resource == null){
-				UOConsole.Fatal("texture is not present {0}", tileart.id);
+				UOConsole.Fatal("texture is not present {0} (slots: WA={1} Leg={2} Enh={3} Lgt={4})",
+					tileart.id,
+					tileart.textures[0] != null ? tileart.textures[0].texturePresent : -1,
+					tileart.textures[1] != null ? tileart.textures[1].texturePresent : -1,
+					tileart.textures[2] != null ? tileart.textures[2].texturePresent : -1,
+					tileart.textures[3] != null ? tileart.textures[3].texturePresent : -1);
 				tileart = UOResourceManager.getTileart(1);
 				if (tileart != null && tileart.textures[0] != null && tileart.textures[0].texturePresent == 1)
 					resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);

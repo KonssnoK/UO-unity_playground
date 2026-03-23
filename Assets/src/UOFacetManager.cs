@@ -85,7 +85,7 @@ namespace UOResources {
 		/// <summary>
 		/// Silent version of getSector — returns null without logging if sector doesn't exist
 		/// </summary>
-		private static FacetSector tryGetSector(int sectorID) {
+		private static FacetSector tryGetSectorSafe(int sectorID) {
 			if (sectorID < 0) return null;
 			if (facetSectors.TryGetValue(sectorID, out FacetSector cached))
 				return cached;
@@ -169,11 +169,43 @@ namespace UOResources {
 			for (int gx = 1; gx < GRID; gx++)
 				for (int gy = 1; gy < GRID; gy++)
 					zGrid[gx, gy] = fs.tiles[gx - 1][gy - 1].z * Z_SCALE;
-			for (int g = 1; g < GRID; g++) {
-				zGrid[0, g] = zGrid[1, g];
-				zGrid[g, 0] = zGrid[g, 1];
+
+			// Edge stitching: use neighbor sectors for reliable Z matching
+			int sid = fs.sectorID;
+			FacetSector secLeft = tryGetSectorSafe(sid - 64);
+			FacetSector secRight = tryGetSectorSafe(sid + 64);
+			FacetSector secUp = tryGetSectorSafe(sid - 1);
+			FacetSector secDown = tryGetSectorSafe(sid + 1);
+
+			// Left edge (gx=0): use left neighbor's column 63
+			for (int gy = 1; gy < GRID; gy++) {
+				if (secLeft != null)
+					zGrid[0, gy] = secLeft.tiles[63][gy - 1].z * Z_SCALE;
+				else
+					zGrid[0, gy] = zGrid[1, gy];
 			}
-			zGrid[0, 0] = zGrid[1, 1];
+			// Top edge (gy=0): use top neighbor's row 63
+			for (int gx = 1; gx < GRID; gx++) {
+				if (secUp != null)
+					zGrid[gx, 0] = secUp.tiles[gx - 1][63].z * Z_SCALE;
+				else
+					zGrid[gx, 0] = zGrid[gx, 1];
+			}
+			// Bottom edge (gy=64): our gy=64 uses tiles[x][63] — correct
+			// Nothing needed, bottom neighbor will stitch its gy=0.
+			// Corner (0,0)
+			if (secLeft != null) {
+				if (secUp != null) {
+					FacetSector secDiag = tryGetSectorSafe(sid - 64 - 1);
+					zGrid[0, 0] = (secDiag != null) ? secDiag.tiles[63][63].z * Z_SCALE : zGrid[1, 1];
+				} else {
+					zGrid[0, 0] = secLeft.tiles[63][0].z * Z_SCALE;
+				}
+			} else if (secUp != null) {
+				zGrid[0, 0] = secUp.tiles[0][63].z * Z_SCALE;
+			} else {
+				zGrid[0, 0] = zGrid[1, 1];
+			}
 
 			// Create shared vertex grid
 			int vertCount = GRID * GRID;
@@ -200,16 +232,29 @@ namespace UOResources {
 			int[,] tileTexIdx = new int[64, 64];
 			int waterTexIdx = -1; // index of the generated water color texture
 
+			// Debug: track unique shader names in this sector
+			Dictionary<string, int> shaderCounts = new Dictionary<string, int>();
+			int nullInfoCount = 0;
+			int nullShaderCount = 0;
+
 			for (int x = 0; x < 64; x++) {
 				for (int y = 0; y < 64; y++) {
 					TextureImageInfo info = UOResourceManager.getLandtileTextureID(fs.tiles[x][y].landtileGraphic);
 					if (info == null) {
 						tileTexIdx[x, y] = 0;
+						nullInfoCount++;
 						continue;
 					}
 
 					// Detect water tiles by shader name
 					string shaderName = UOResourceManager.getLandtileShaderName(fs.tiles[x][y].landtileGraphic);
+					if (shaderName == null) {
+						nullShaderCount++;
+					} else {
+						if (!shaderCounts.ContainsKey(shaderName))
+							shaderCounts[shaderName] = 0;
+						shaderCounts[shaderName]++;
+					}
 					bool isWater = shaderName != null && shaderName.Contains("Water");
 
 					if (isWater) {
@@ -232,6 +277,14 @@ namespace UOResources {
 					}
 				}
 			}
+
+			// Log sector shader summary
+			string shaderSummary = string.Format("SECTOR {0} ({1},{2}): ", fs.sectorID, worldX, worldY);
+			foreach (var kv in shaderCounts)
+				shaderSummary += string.Format("[{0}={1}] ", kv.Key, kv.Value);
+			if (nullInfoCount > 0) shaderSummary += string.Format("[nullInfo={0}] ", nullInfoCount);
+			if (nullShaderCount > 0) shaderSummary += string.Format("[nullShader={0}] ", nullShaderCount);
+			UOConsole.Debug(shaderSummary);
 
 			// Build single triangle list (no submeshes)
 			int[] triangles = new int[64 * 64 * 6];
@@ -257,51 +310,75 @@ namespace UOResources {
 				for (int y = 0; y < 64; y++)
 					indexData[(y + 1) * MAP_SIZE + (x + 1)] = (byte)tileTexIdx[x, y];
 
-			// Load neighbor sectors for border blending
-			int sid = fs.sectorID;
-			FacetSector secLeft = tryGetSector(sid - 64);
-			FacetSector secRight = tryGetSector(sid + 64);
-			FacetSector secUp = tryGetSector(sid - 1);
-			FacetSector secDown = tryGetSector(sid + 1);
-
-			// Try to resolve a neighbor tile's texture index, return -1 on failure
-			System.Func<FacetSector, int, int, int> tryGetBorderIdx = (sec, tx, ty) => {
-				if (sec == null) return -1;
-				TextureImageInfo info = UOResourceManager.getLandtileTextureID(sec.tiles[tx][ty].landtileGraphic);
+			// Resolve a neighbor tile's landtile graphic to a texture index in our array
+			System.Func<ushort, int> resolveNeighborGraphic = (graphic) => {
+				TextureImageInfo info = UOResourceManager.getLandtileTextureID(graphic);
 				if (info == null) return -1;
-				// Check if neighbor tile is water
-				string sn = UOResourceManager.getLandtileShaderName(sec.tiles[tx][ty].landtileGraphic);
+				string sn = UOResourceManager.getLandtileShaderName(graphic);
 				if (sn != null && sn.Contains("Water")) {
-					return (waterTexIdx >= 0) ? waterTexIdx : -1;
+					if (waterTexIdx < 0) {
+						waterTexIdx = uniqueTexInfos.Count;
+						uniqueTexInfos.Add(info);
+						isWaterTexture.Add(true);
+					}
+					return waterTexIdx;
 				}
-				return addTexInfo(info, texIdxMap, uniqueTexInfos);
+				int idx = addTexInfo(info, texIdxMap, uniqueTexInfos);
+				while (isWaterTexture.Count < uniqueTexInfos.Count)
+					isWaterTexture.Add(false);
+				return idx;
 			};
 
-			// Left border (expanded x=0): neighbor's column 63
+			// Populate border pixels from neighbor sectors for cross-sector blending
+			// Left border (expanded x=0): left neighbor's column 63
 			for (int y = 0; y < 64; y++) {
-				int bi = tryGetBorderIdx(secLeft, 63, y);
-				indexData[(y + 1) * MAP_SIZE + 0] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 1];
+				if (secLeft != null) {
+					int bi = resolveNeighborGraphic(secLeft.tiles[63][y].landtileGraphic);
+					indexData[(y + 1) * MAP_SIZE + 0] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 1];
+				} else {
+					indexData[(y + 1) * MAP_SIZE + 0] = indexData[(y + 1) * MAP_SIZE + 1];
+				}
 			}
-			// Right border (expanded x=65): neighbor's column 0
+			// Right border (expanded x=65): right neighbor's column 0
 			for (int y = 0; y < 64; y++) {
-				int bi = tryGetBorderIdx(secRight, 0, y);
-				indexData[(y + 1) * MAP_SIZE + 65] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 64];
+				if (secRight != null) {
+					int bi = resolveNeighborGraphic(secRight.tiles[0][y].landtileGraphic);
+					indexData[(y + 1) * MAP_SIZE + 65] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 64];
+				} else {
+					indexData[(y + 1) * MAP_SIZE + 65] = indexData[(y + 1) * MAP_SIZE + 64];
+				}
 			}
-			// Top border (expanded y=0): neighbor's row 63
+			// Top border (expanded y=0): top neighbor's row 63
 			for (int x = 0; x < 64; x++) {
-				int bi = tryGetBorderIdx(secUp, x, 63);
-				indexData[0 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[1 * MAP_SIZE + (x + 1)];
+				if (secUp != null) {
+					int bi = resolveNeighborGraphic(secUp.tiles[x][63].landtileGraphic);
+					indexData[0 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[1 * MAP_SIZE + (x + 1)];
+				} else {
+					indexData[0 * MAP_SIZE + (x + 1)] = indexData[1 * MAP_SIZE + (x + 1)];
+				}
 			}
-			// Bottom border (expanded y=65): neighbor's row 0
+			// Bottom border (expanded y=65): bottom neighbor's row 0
 			for (int x = 0; x < 64; x++) {
-				int bi = tryGetBorderIdx(secDown, x, 0);
-				indexData[65 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[64 * MAP_SIZE + (x + 1)];
+				if (secDown != null) {
+					int bi = resolveNeighborGraphic(secDown.tiles[x][0].landtileGraphic);
+					indexData[65 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[64 * MAP_SIZE + (x + 1)];
+				} else {
+					indexData[65 * MAP_SIZE + (x + 1)] = indexData[64 * MAP_SIZE + (x + 1)];
+				}
 			}
-			// Corners: repeat nearest edge
-			indexData[0] = indexData[1];
-			indexData[65] = indexData[64];
-			indexData[65 * MAP_SIZE] = indexData[65 * MAP_SIZE + 1];
-			indexData[65 * MAP_SIZE + 65] = indexData[65 * MAP_SIZE + 64];
+			// Corners: use diagonal neighbor sectors
+			FacetSector secNW = tryGetSectorSafe(sid - 64 - 1);
+			FacetSector secNE = tryGetSectorSafe(sid + 64 - 1);
+			FacetSector secSW = tryGetSectorSafe(sid - 64 + 1);
+			FacetSector secSE = tryGetSectorSafe(sid + 64 + 1);
+			int cnw = (secNW != null) ? resolveNeighborGraphic(secNW.tiles[63][63].landtileGraphic) : -1;
+			indexData[0] = (cnw >= 0) ? (byte)cnw : indexData[1];
+			int cne = (secNE != null) ? resolveNeighborGraphic(secNE.tiles[0][63].landtileGraphic) : -1;
+			indexData[65] = (cne >= 0) ? (byte)cne : indexData[64];
+			int csw = (secSW != null) ? resolveNeighborGraphic(secSW.tiles[63][0].landtileGraphic) : -1;
+			indexData[65 * MAP_SIZE] = (csw >= 0) ? (byte)csw : indexData[65 * MAP_SIZE + 1];
+			int cse = (secSE != null) ? resolveNeighborGraphic(secSE.tiles[0][0].landtileGraphic) : -1;
+			indexData[65 * MAP_SIZE + 65] = (cse >= 0) ? (byte)cse : indexData[65 * MAP_SIZE + 64];
 
 			// Now build Texture2DArray with ALL collected textures (including neighbor ones)
 			if (uniqueTexInfos.Count > 0) {
