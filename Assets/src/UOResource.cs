@@ -18,6 +18,7 @@ namespace UOResources {
 		private Texture2D texture = null;
 		private Material material = null;
 		private string stype;
+		private ShaderTypes shaderType;
 		uint references;//todo
 		public bool isLegacy;
 
@@ -32,10 +33,11 @@ namespace UOResources {
 			_ddsData.format = img.format;
 			_ddsData.rawData = img.rawTextureData;
 			isLegacy = _isLegacy;
+			shaderType = type;
 
 			switch (type) {
 				case ShaderTypes.Sprite: stype = "Sprites/Default"; break;
-				case ShaderTypes.Terrain: stype = "Diffuse"; break;
+				case ShaderTypes.Terrain: stype = "UO/TerrainTile"; break;
 				default: stype = "Sprites/Default"; break;
 			}
 		}
@@ -46,6 +48,10 @@ namespace UOResources {
 
 			texture = new Texture2D(_ddsData.width, _ddsData.height, _ddsData.format, false);
 			texture.LoadRawTextureData(_ddsData.rawData);
+			if (shaderType == ShaderTypes.Terrain) {
+				texture.wrapMode = TextureWrapMode.Repeat;
+				texture.filterMode = FilterMode.Bilinear;
+			}
 			texture.Apply();
 
 			return texture;

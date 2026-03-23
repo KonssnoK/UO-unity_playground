@@ -110,16 +110,16 @@ namespace UOResources {
 			//Set the data to a mesh
 			Mesh mesh = new Mesh();
 			UOFacetManager.facetSectorMesh m = UOFacetManager.buildTerrainMesh(sec);
-			//Copy values from the specific class.... i tried using directly a mesh but didn't worked..
+
+			// Must set vertices first, then subMeshCount, then triangles per submesh
 			mesh.vertices = m.vertices;
-			mesh.triangles = m.triangles;
 			mesh.normals = m.normals;
 			mesh.uv = m.uvs;
+
 			int i = 0;
 			mesh.subMeshCount = m.subMeshes.Values.Count;
-			UOConsole.Fatal("terrain: {0} subMeshes", mesh.subMeshCount);
+			UOConsole.Debug("terrain: {0} subMeshes", mesh.subMeshCount);
 			foreach (uint k in m.subMeshes.Keys) {
-				//UOConsole.Fatal(string.Format("idx {0} texture {1} count: {2}", i, k, m.subMeshes[k].Count));
 				mesh.SetTriangles(m.subMeshes[k].ToArray(), i++);
 			}
 
@@ -145,108 +145,86 @@ namespace UOResources {
 			int worldY = (fs.sectorID % 64) * 64;
 			int worldX = (fs.sectorID / 64) * 64;
 
-			mesh.vertices = new Vector3[4 * (64 * 64)];
-			mesh.normals = new Vector3[4 * (64 * 64)];
-			mesh.uvs = new Vector2[4 * 64 * 64];
+			const int GRID = 65; // 65x65 shared vertices for 64x64 tiles
+			const float Z_SCALE = 6f / UOSprite.UOEC_SIZE;
 
-			mesh.triangles = new int[3 * (64 * 64 * 2)];
+			// Build Z grid — vertex(gx,gy) gets Z from tiles[gx-1][gy-1]
+			// In UO, tile(x,y).z represents the SE corner of that tile
+			float[,] zGrid = new float[GRID, GRID];
+			for (int gx = 1; gx < GRID; gx++) {
+				for (int gy = 1; gy < GRID; gy++) {
+					zGrid[gx, gy] = fs.tiles[gx - 1][gy - 1].z * Z_SCALE;
+				}
+			}
+			// Edge row/column 0: extend from nearest inner vertex (no neighbor sector data)
+			for (int g = 1; g < GRID; g++) {
+				zGrid[0, g] = zGrid[1, g];
+				zGrid[g, 0] = zGrid[g, 1];
+			}
+			zGrid[0, 0] = zGrid[1, 1];
 
-			int flipper = -1;
-			for (int x = 0; x < fs.tiles.Length; ++x) {
-				for (int y = 0; y < fs.tiles[x].Length; ++y) {
-					float z = +fs.tiles[x][y].z * 6 / UOSprite.UOEC_SIZE;
-					int idxVertices = 4 * (x + y * 64);
+			// Create shared vertex grid
+			int vertCount = GRID * GRID;
+			mesh.vertices = new Vector3[vertCount];
+			mesh.normals = new Vector3[vertCount];
+			mesh.uvs = new Vector2[vertCount];
 
-					float z0, z1, z2, z3;
-					z0 = z;
-					z1 = z;
-					z2 = z;
-					z3 = z;
-					if(x == 0){
-						//TODO: take information from other sector delimiters
-					} else if (y == 0) {
-					} else {
-						z0 = (fs.tiles[x - 1][y - 1].z) * 6 / (UOSprite.UOEC_SIZE);
-						z1 = (fs.tiles[x][y - 1].z) * 6 / (UOSprite.UOEC_SIZE);
-						z2 = (fs.tiles[x - 1][y].z) * 6 / (UOSprite.UOEC_SIZE);
-						z3 = (fs.tiles[x][y].z) * 6 / (UOSprite.UOEC_SIZE);
-					}
+			for (int gx = 0; gx < GRID; gx++) {
+				for (int gy = 0; gy < GRID; gy++) {
+					int idx = gx * GRID + gy;
+					float z = zGrid[gx, gy];
+					int px = gx + worldX;
+					int py = gy + worldY;
 
-					int _x = x + worldX, _y = y + worldY;
-					// 0	1
-					// |  \ |
-					// 2	3
-					//Vertices
-					mesh.vertices[idxVertices + 0] = new Vector3(_x - z0, flipper * _y + z0, 100 - z0);
-					mesh.vertices[idxVertices + 1] = new Vector3(_x + 1 - z1, flipper * _y + z1, 100 - z1);
-					mesh.vertices[idxVertices + 2] = new Vector3(_x - z2, flipper * (_y + 1) + z2, 100 - z2);
-					mesh.vertices[idxVertices + 3] = new Vector3(_x + 1 - z3, flipper * (_y + 1) + z3, 100 - z3);
-
-					//Normals
-					mesh.normals[idxVertices + 0] = mesh.normals[idxVertices + 1] = mesh.normals[idxVertices + 2] = mesh.normals[idxVertices + 3] = Vector3.up;
-
-
-					//Triangles - Clockwise
-					List<int> subTriangles;// List containin all indices of sametexture
-					uvStatus uvOffset;
-
-					TextureImageInfo textureInfo = UOResourceManager.getLandtileTextureID(fs.tiles[x][y].landtileGraphic);
-					if (mesh.subMeshes.ContainsKey(textureInfo.textureIDX)) {
-						subTriangles = mesh.subMeshes[textureInfo.textureIDX];//Get the already instanced list
-						uvOffset = mesh.subMeshTextureOffset[textureInfo.textureIDX];
-					} else {
-						//Create a new list and set it
-						subTriangles = new List<int>();
-						mesh.subMeshes.Add(textureInfo.textureIDX, subTriangles);
-						//Each subMesh has a material 
-						Material mat = UOResourceManager.getResource(textureInfo, ShaderTypes.Terrain).getMaterial();
-						mesh.materials.Add(mat);
-						//
-						uvOffset = new uvStatus();
-						uvOffset.u = 0;
-						uvOffset.v = 0;
-						mesh.subMeshTextureOffset[textureInfo.textureIDX] = uvOffset;
-					}
-
-					//Bottom triangles
-					int offset = idxVertices;
-					subTriangles.Add(offset);
-					subTriangles.Add(offset + 3);
-					subTriangles.Add(offset + 2);
-					//Upper triangles
-					subTriangles.Add(offset);
-					subTriangles.Add(offset + 1);
-					subTriangles.Add(offset + 3);
-					//End Triangles
-
-					//UVs
-					float us, ue, vs, ve;
-					float texSize = 1.0f / textureInfo.repetition;
-					us = uvOffset.u;
-					ue = uvOffset.u + texSize;
-					vs = uvOffset.v;
-					ve = uvOffset.v + texSize;
-
-					if (ue > 1.0f)
-						ue -= 1.0f;
-					if (ve > 1.0f)
-						ve -= 1.0f;
-					mesh.uvs[idxVertices + 0] = new Vector2(us, ve);
-					mesh.uvs[idxVertices + 1] = new Vector2(ue, ve);
-					mesh.uvs[idxVertices + 2] = new Vector2(us, vs);
-					mesh.uvs[idxVertices + 3] = new Vector2(ue, vs);
-
-					//TODO Correct handling
-					//uvOffset.u += texSize;
-					//uvOffset.v += texSize;
-					if (uvOffset.v >= 1.0f)
-						uvOffset.v = 0;
-					if (uvOffset.u >= 1.0f)
-						uvOffset.u = 0;
+					mesh.vertices[idx] = new Vector3(px - z, -py + z, 100 - z);
+					mesh.normals[idx] = Vector3.up;
+					// Store grid coords as UV — shader scales by repetition
+					mesh.uvs[idx] = new Vector2(gx, gy);
 				}
 			}
 
-			
+			// Build triangles per submesh (grouped by texture)
+			mesh.triangles = new int[0];
+
+			for (int x = 0; x < 64; x++) {
+				for (int y = 0; y < 64; y++) {
+					TextureImageInfo textureInfo = UOResourceManager.getLandtileTextureID(fs.tiles[x][y].landtileGraphic);
+					if (textureInfo == null) continue;
+
+					List<int> subTriangles;
+					if (!mesh.subMeshes.TryGetValue(textureInfo.textureIDX, out subTriangles)) {
+						subTriangles = new List<int>();
+						mesh.subMeshes.Add(textureInfo.textureIDX, subTriangles);
+
+						UOResource res = UOResourceManager.getResource(textureInfo, ShaderTypes.Terrain);
+						if (res != null) {
+							Material mat = res.getMaterial();
+							float rep = (textureInfo.repetition > 0) ? (1.0f / textureInfo.repetition) : 0.25f;
+							mat.SetFloat("_Repetition", rep);
+							mesh.materials.Add(mat);
+						} else {
+							mesh.materials.Add(new Material(Shader.Find("Diffuse")));
+						}
+					}
+
+					// Shared grid vertex indices for tile (x,y)
+					// Tile corners: (x,y), (x+1,y), (x,y+1), (x+1,y+1)
+					int v0 = x * GRID + y;
+					int v1 = (x + 1) * GRID + y;
+					int v2 = x * GRID + (y + 1);
+					int v3 = (x + 1) * GRID + (y + 1);
+
+					// Two triangles (same winding as original)
+					subTriangles.Add(v0);
+					subTriangles.Add(v3);
+					subTriangles.Add(v2);
+
+					subTriangles.Add(v0);
+					subTriangles.Add(v1);
+					subTriangles.Add(v3);
+				}
+			}
+
 			return mesh;
 		}
 		#endregion terrain
