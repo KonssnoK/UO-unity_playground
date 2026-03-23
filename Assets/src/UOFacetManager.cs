@@ -196,7 +196,9 @@ namespace UOResources {
 			// Collect unique textures and build tile→index mapping
 			Dictionary<uint, int> texIdxMap = new Dictionary<uint, int>();
 			List<TextureImageInfo> uniqueTexInfos = new List<TextureImageInfo>();
+			List<bool> isWaterTexture = new List<bool>();
 			int[,] tileTexIdx = new int[64, 64];
+			int waterTexIdx = -1; // index of the generated water color texture
 
 			for (int x = 0; x < 64; x++) {
 				for (int y = 0; y < 64; y++) {
@@ -205,13 +207,29 @@ namespace UOResources {
 						tileTexIdx[x, y] = 0;
 						continue;
 					}
-					int arrayIdx;
-					if (!texIdxMap.TryGetValue(info.textureIDX, out arrayIdx)) {
-						arrayIdx = uniqueTexInfos.Count;
-						texIdxMap[info.textureIDX] = arrayIdx;
-						uniqueTexInfos.Add(info);
+
+					// Detect water tiles by shader name
+					string shaderName = UOResourceManager.getLandtileShaderName(fs.tiles[x][y].landtileGraphic);
+					bool isWater = shaderName != null && shaderName.Contains("Water");
+
+					if (isWater) {
+						// All water tiles share one generated water color texture
+						if (waterTexIdx < 0) {
+							waterTexIdx = uniqueTexInfos.Count;
+							uniqueTexInfos.Add(info); // placeholder, will be replaced with generated texture
+							isWaterTexture.Add(true);
+						}
+						tileTexIdx[x, y] = waterTexIdx;
+					} else {
+						int arrayIdx;
+						if (!texIdxMap.TryGetValue(info.textureIDX, out arrayIdx)) {
+							arrayIdx = uniqueTexInfos.Count;
+							texIdxMap[info.textureIDX] = arrayIdx;
+							uniqueTexInfos.Add(info);
+							isWaterTexture.Add(false);
+						}
+						tileTexIdx[x, y] = arrayIdx;
 					}
-					tileTexIdx[x, y] = arrayIdx;
 				}
 			}
 
@@ -246,41 +264,38 @@ namespace UOResources {
 			FacetSector secUp = tryGetSector(sid - 1);
 			FacetSector secDown = tryGetSector(sid + 1);
 
+			// Try to resolve a neighbor tile's texture index, return -1 on failure
+			System.Func<FacetSector, int, int, int> tryGetBorderIdx = (sec, tx, ty) => {
+				if (sec == null) return -1;
+				TextureImageInfo info = UOResourceManager.getLandtileTextureID(sec.tiles[tx][ty].landtileGraphic);
+				if (info == null) return -1;
+				// Check if neighbor tile is water
+				string sn = UOResourceManager.getLandtileShaderName(sec.tiles[tx][ty].landtileGraphic);
+				if (sn != null && sn.Contains("Water")) {
+					return (waterTexIdx >= 0) ? waterTexIdx : -1;
+				}
+				return addTexInfo(info, texIdxMap, uniqueTexInfos);
+			};
+
 			// Left border (expanded x=0): neighbor's column 63
 			for (int y = 0; y < 64; y++) {
-				if (secLeft != null) {
-					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secLeft.tiles[63][y].landtileGraphic);
-					indexData[(y + 1) * MAP_SIZE + 0] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
-				} else {
-					indexData[(y + 1) * MAP_SIZE + 0] = indexData[(y + 1) * MAP_SIZE + 1];
-				}
+				int bi = tryGetBorderIdx(secLeft, 63, y);
+				indexData[(y + 1) * MAP_SIZE + 0] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 1];
 			}
 			// Right border (expanded x=65): neighbor's column 0
 			for (int y = 0; y < 64; y++) {
-				if (secRight != null) {
-					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secRight.tiles[0][y].landtileGraphic);
-					indexData[(y + 1) * MAP_SIZE + 65] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
-				} else {
-					indexData[(y + 1) * MAP_SIZE + 65] = indexData[(y + 1) * MAP_SIZE + 64];
-				}
+				int bi = tryGetBorderIdx(secRight, 0, y);
+				indexData[(y + 1) * MAP_SIZE + 65] = (bi >= 0) ? (byte)bi : indexData[(y + 1) * MAP_SIZE + 64];
 			}
 			// Top border (expanded y=0): neighbor's row 63
 			for (int x = 0; x < 64; x++) {
-				if (secUp != null) {
-					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secUp.tiles[x][63].landtileGraphic);
-					indexData[0 * MAP_SIZE + (x + 1)] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
-				} else {
-					indexData[0 * MAP_SIZE + (x + 1)] = indexData[1 * MAP_SIZE + (x + 1)];
-				}
+				int bi = tryGetBorderIdx(secUp, x, 63);
+				indexData[0 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[1 * MAP_SIZE + (x + 1)];
 			}
 			// Bottom border (expanded y=65): neighbor's row 0
 			for (int x = 0; x < 64; x++) {
-				if (secDown != null) {
-					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secDown.tiles[x][0].landtileGraphic);
-					indexData[65 * MAP_SIZE + (x + 1)] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
-				} else {
-					indexData[65 * MAP_SIZE + (x + 1)] = indexData[64 * MAP_SIZE + (x + 1)];
-				}
+				int bi = tryGetBorderIdx(secDown, x, 0);
+				indexData[65 * MAP_SIZE + (x + 1)] = (bi >= 0) ? (byte)bi : indexData[64 * MAP_SIZE + (x + 1)];
 			}
 			// Corners: repeat nearest edge
 			indexData[0] = indexData[1];
@@ -296,9 +311,32 @@ namespace UOResources {
 				texArray.wrapMode = TextureWrapMode.Repeat;
 				texArray.filterMode = FilterMode.Bilinear;
 
+				// Generate a solid water color texture
+				Texture2D waterTex = null;
+				if (waterTexIdx >= 0) {
+					waterTex = new Texture2D(TARGET_SIZE, TARGET_SIZE, TextureFormat.RGBA32, false);
+					Color32 waterColor = new Color32(0, 40, 90, 255);
+					var waterPixels = waterTex.GetPixelData<Color32>(0);
+					for (int p = 0; p < waterPixels.Length; p++)
+						waterPixels[p] = waterColor;
+					waterTex.Apply();
+				}
+
 				for (int i = 0; i < uniqueTexInfos.Count; i++) {
-					UOResource res = UOResourceManager.getResource(uniqueTexInfos[i], ShaderTypes.Terrain);
-					Texture2D srcTex = res.getTexture();
+					Texture2D srcTex;
+
+					if (i < isWaterTexture.Count && isWaterTexture[i] && waterTex != null) {
+						// Water tile: use generated solid color instead of normal map
+						srcTex = waterTex;
+					} else {
+						UOResource res = UOResourceManager.getResource(uniqueTexInfos[i], ShaderTypes.Terrain);
+						if (res == null) {
+							// Fallback: use water texture or skip
+							srcTex = waterTex != null ? waterTex : Texture2D.whiteTexture;
+						} else {
+							srcTex = res.getTexture();
+						}
+					}
 
 					RenderTexture rt = RenderTexture.GetTemporary(TARGET_SIZE, TARGET_SIZE, 0, RenderTextureFormat.ARGB32);
 					Graphics.Blit(srcTex, rt);
@@ -313,6 +351,9 @@ namespace UOResources {
 					texArray.SetPixelData(resized.GetRawTextureData<byte>(), 0, i);
 					Object.Destroy(resized);
 				}
+
+				if (waterTex != null)
+					Object.Destroy(waterTex);
 				texArray.Apply(false);
 
 				// Create index map texture (66x66)

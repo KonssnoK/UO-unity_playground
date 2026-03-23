@@ -54,6 +54,8 @@ namespace UOResources {
 		private static ConcurrentDictionary<uint, UOResource> legacyTextures = new ConcurrentDictionary<uint, UOResource>();
 		//Given a landtile legacy ID returns a texture ID
 		private static ConcurrentDictionary<uint, TextureImageInfo> landtiles = new ConcurrentDictionary<uint, TextureImageInfo>();
+		//Given a landtile legacy ID returns the shader name index from its TerrainDefinition
+		private static ConcurrentDictionary<uint, int> landtileShaderIdx = new ConcurrentDictionary<uint, int>();
 		//legacyterrainmap -> given a legacy landtile id, returns a struct
 		private static Dictionary<uint, legacyTerrainMap_t> legacyTerrainMap = new Dictionary<uint, legacyTerrainMap_t>();
 		//tileart
@@ -197,7 +199,7 @@ namespace UOResources {
 			int start = (tga.LastIndexOf("\\") == -1) ? 0 : (tga.LastIndexOf("\\") + 1);
 			int end = tga.IndexOf("_");
 			if (end == -1) {
-				UOConsole.Fatal("no descr in: {0} .. trying with extension", tga);
+				UOConsole.Debug("no descr in: {0} .. trying with extension", tga);
 				tga = tga.Replace(".tga","");
 				end = tga.Length;
 			}
@@ -240,7 +242,7 @@ namespace UOResources {
 			int start = (tga.LastIndexOf("\\") == -1) ? 0 : (tga.LastIndexOf("\\") + 1);
 			int end = tga.IndexOf("_");
 			if (end == -1) {
-				UOConsole.Fatal("no descr in: {0} .. trying with extension", tga);
+				UOConsole.Debug("no descr in: {0} .. trying with extension", tga);
 				tga = tga.Replace(".tga", "");
 				end = tga.Length;
 			}
@@ -307,9 +309,21 @@ namespace UOResources {
 			}
 
 			landtiles.TryAdd(legacyLandtileID, td.textures.texturesArray[landtileID.newSubtype]);
+			landtileShaderIdx.TryAdd(legacyLandtileID, td.textures.shaderNameIDX);
 
 			//Returns the texture according to subtype
 			return td.textures.texturesArray[landtileID.newSubtype];
+		}
+
+		/// <summary>
+		/// Returns the shader name string for a landtile, looked up from string dictionary
+		/// </summary>
+		public static string getLandtileShaderName(uint legacyLandtileID) {
+			if (!landtileShaderIdx.TryGetValue(legacyLandtileID, out int idx))
+				return null;
+			if (idx < 0 || idx >= stringDictionary.count)
+				return null;
+			return stringDictionary.values[idx];
 		}
 
 		//Get a tileart given a graphic id
