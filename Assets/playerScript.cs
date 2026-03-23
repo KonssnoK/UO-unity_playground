@@ -27,7 +27,7 @@ public class playerScript : MonoBehaviour {
 		float realx = (-moveVertical * 0.5f + moveHorizontal * 0.5f) * Time.deltaTime;
 		float realy = (-moveVertical * 0.5f - moveHorizontal * 0.5f) * Time.deltaTime;
 
-		float speed = 3.0f;
+		float speed = 6.0f;
 		this.transform.Translate(new Vector3(realx, realy) * speed);
 
 		this.position.x = (int)((this.transform.position.x - this.transform.position.y) * 1.6525f);

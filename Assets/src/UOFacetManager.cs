@@ -14,21 +14,12 @@ using System.Collections;
 namespace UOResources {
 	public class UOFacetManager {
 
-		public class uvStatus{
-			public float u;
-			public float v;
-			public uvStatus(){}
-		}
-
-
 		public class facetSectorMesh{
 			public Vector3[] vertices;
 			public int[] triangles;
 			public Vector3[] normals;
 			public Vector2[] uvs;
-			public Dictionary<uint, List<int>> subMeshes = new Dictionary<uint, List<int>>();
-			public Dictionary<uint, uvStatus> subMeshTextureOffset = new Dictionary<uint, uvStatus>();
-			public List<Material> materials = new List<Material>();
+			public Material terrainMaterial;
 			public facetSectorMesh() {
 			}
 		};
@@ -91,6 +82,35 @@ namespace UOResources {
 			return fs;
 		}
 
+		/// <summary>
+		/// Silent version of getSector — returns null without logging if sector doesn't exist
+		/// </summary>
+		private static FacetSector tryGetSector(int sectorID) {
+			if (sectorID < 0) return null;
+			if (facetSectors.TryGetValue(sectorID, out FacetSector cached))
+				return cached;
+			int currentFacet = 0;
+			string toHash = string.Format("build/sectors/facet_{0:D2}/{1:D8}.bin", currentFacet, sectorID);
+			ulong hash = HashDictionary.HashFileName(toHash);
+			if (!UOResourceManager.uopHashes.facet0Hashes.ContainsKey(hash))
+				return null;
+			return getSector(sectorID);
+		}
+
+		/// <summary>
+		/// Add a texture to the collection if not already present; return its array index
+		/// </summary>
+		private static int addTexInfo(TextureImageInfo info, Dictionary<uint, int> map, List<TextureImageInfo> list) {
+			if (info == null) return 0;
+			int idx;
+			if (!map.TryGetValue(info.textureIDX, out idx)) {
+				idx = list.Count;
+				map[info.textureIDX] = idx;
+				list.Add(info);
+			}
+			return idx;
+		}
+
 		#region terrain
 		/// <summary>
 		/// MAIN THREAD
@@ -111,20 +131,16 @@ namespace UOResources {
 			Mesh mesh = new Mesh();
 			UOFacetManager.facetSectorMesh m = UOFacetManager.buildTerrainMesh(sec);
 
-			// Must set vertices first, then subMeshCount, then triangles per submesh
 			mesh.vertices = m.vertices;
 			mesh.normals = m.normals;
 			mesh.uv = m.uvs;
-
-			int i = 0;
-			mesh.subMeshCount = m.subMeshes.Values.Count;
-			UOConsole.Debug("terrain: {0} subMeshes", mesh.subMeshCount);
-			foreach (uint k in m.subMeshes.Keys) {
-				mesh.SetTriangles(m.subMeshes[k].ToArray(), i++);
-			}
+			mesh.triangles = m.triangles;
 
 			mf.mesh = mesh;
-			mr.materials = m.materials.ToArray();
+			if (m.terrainMaterial != null)
+				mr.material = m.terrainMaterial;
+			else
+				mr.material = new Material(Shader.Find("Diffuse"));
 
 			float sq = Mathf.Sqrt(2.0f);
 			terrain.transform.Rotate(0, 0, -45.0f);
@@ -149,14 +165,10 @@ namespace UOResources {
 			const float Z_SCALE = 6f / UOSprite.UOEC_SIZE;
 
 			// Build Z grid — vertex(gx,gy) gets Z from tiles[gx-1][gy-1]
-			// In UO, tile(x,y).z represents the SE corner of that tile
 			float[,] zGrid = new float[GRID, GRID];
-			for (int gx = 1; gx < GRID; gx++) {
-				for (int gy = 1; gy < GRID; gy++) {
+			for (int gx = 1; gx < GRID; gx++)
+				for (int gy = 1; gy < GRID; gy++)
 					zGrid[gx, gy] = fs.tiles[gx - 1][gy - 1].z * Z_SCALE;
-				}
-			}
-			// Edge row/column 0: extend from nearest inner vertex (no neighbor sector data)
 			for (int g = 1; g < GRID; g++) {
 				zGrid[0, g] = zGrid[1, g];
 				zGrid[g, 0] = zGrid[g, 1];
@@ -175,54 +187,163 @@ namespace UOResources {
 					float z = zGrid[gx, gy];
 					int px = gx + worldX;
 					int py = gy + worldY;
-
 					mesh.vertices[idx] = new Vector3(px - z, -py + z, 100 - z);
 					mesh.normals[idx] = Vector3.up;
-					// Store grid coords as UV — shader scales by repetition
 					mesh.uvs[idx] = new Vector2(gx, gy);
 				}
 			}
 
-			// Build triangles per submesh (grouped by texture)
-			mesh.triangles = new int[0];
+			// Collect unique textures and build tile→index mapping
+			Dictionary<uint, int> texIdxMap = new Dictionary<uint, int>();
+			List<TextureImageInfo> uniqueTexInfos = new List<TextureImageInfo>();
+			int[,] tileTexIdx = new int[64, 64];
 
 			for (int x = 0; x < 64; x++) {
 				for (int y = 0; y < 64; y++) {
-					TextureImageInfo textureInfo = UOResourceManager.getLandtileTextureID(fs.tiles[x][y].landtileGraphic);
-					if (textureInfo == null) continue;
-
-					List<int> subTriangles;
-					if (!mesh.subMeshes.TryGetValue(textureInfo.textureIDX, out subTriangles)) {
-						subTriangles = new List<int>();
-						mesh.subMeshes.Add(textureInfo.textureIDX, subTriangles);
-
-						UOResource res = UOResourceManager.getResource(textureInfo, ShaderTypes.Terrain);
-						if (res != null) {
-							Material mat = res.getMaterial();
-							float rep = (textureInfo.repetition > 0) ? (1.0f / textureInfo.repetition) : 0.25f;
-							mat.SetFloat("_Repetition", rep);
-							mesh.materials.Add(mat);
-						} else {
-							mesh.materials.Add(new Material(Shader.Find("Diffuse")));
-						}
+					TextureImageInfo info = UOResourceManager.getLandtileTextureID(fs.tiles[x][y].landtileGraphic);
+					if (info == null) {
+						tileTexIdx[x, y] = 0;
+						continue;
 					}
+					int arrayIdx;
+					if (!texIdxMap.TryGetValue(info.textureIDX, out arrayIdx)) {
+						arrayIdx = uniqueTexInfos.Count;
+						texIdxMap[info.textureIDX] = arrayIdx;
+						uniqueTexInfos.Add(info);
+					}
+					tileTexIdx[x, y] = arrayIdx;
+				}
+			}
 
-					// Shared grid vertex indices for tile (x,y)
-					// Tile corners: (x,y), (x+1,y), (x,y+1), (x+1,y+1)
+			// Build single triangle list (no submeshes)
+			int[] triangles = new int[64 * 64 * 6];
+			int ti = 0;
+			for (int x = 0; x < 64; x++) {
+				for (int y = 0; y < 64; y++) {
 					int v0 = x * GRID + y;
 					int v1 = (x + 1) * GRID + y;
 					int v2 = x * GRID + (y + 1);
 					int v3 = (x + 1) * GRID + (y + 1);
-
-					// Two triangles (same winding as original)
-					subTriangles.Add(v0);
-					subTriangles.Add(v3);
-					subTriangles.Add(v2);
-
-					subTriangles.Add(v0);
-					subTriangles.Add(v1);
-					subTriangles.Add(v3);
+					triangles[ti++] = v0; triangles[ti++] = v3; triangles[ti++] = v2;
+					triangles[ti++] = v0; triangles[ti++] = v1; triangles[ti++] = v3;
 				}
+			}
+			mesh.triangles = triangles;
+
+			// Build 66x66 expanded index map — includes 1-pixel border from neighbor sectors
+			const int MAP_SIZE = 66;
+			byte[] indexData = new byte[MAP_SIZE * MAP_SIZE];
+
+			// Center 64x64 (at offset +1,+1)
+			for (int x = 0; x < 64; x++)
+				for (int y = 0; y < 64; y++)
+					indexData[(y + 1) * MAP_SIZE + (x + 1)] = (byte)tileTexIdx[x, y];
+
+			// Load neighbor sectors for border blending
+			int sid = fs.sectorID;
+			FacetSector secLeft = tryGetSector(sid - 64);
+			FacetSector secRight = tryGetSector(sid + 64);
+			FacetSector secUp = tryGetSector(sid - 1);
+			FacetSector secDown = tryGetSector(sid + 1);
+
+			// Left border (expanded x=0): neighbor's column 63
+			for (int y = 0; y < 64; y++) {
+				if (secLeft != null) {
+					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secLeft.tiles[63][y].landtileGraphic);
+					indexData[(y + 1) * MAP_SIZE + 0] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
+				} else {
+					indexData[(y + 1) * MAP_SIZE + 0] = indexData[(y + 1) * MAP_SIZE + 1];
+				}
+			}
+			// Right border (expanded x=65): neighbor's column 0
+			for (int y = 0; y < 64; y++) {
+				if (secRight != null) {
+					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secRight.tiles[0][y].landtileGraphic);
+					indexData[(y + 1) * MAP_SIZE + 65] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
+				} else {
+					indexData[(y + 1) * MAP_SIZE + 65] = indexData[(y + 1) * MAP_SIZE + 64];
+				}
+			}
+			// Top border (expanded y=0): neighbor's row 63
+			for (int x = 0; x < 64; x++) {
+				if (secUp != null) {
+					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secUp.tiles[x][63].landtileGraphic);
+					indexData[0 * MAP_SIZE + (x + 1)] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
+				} else {
+					indexData[0 * MAP_SIZE + (x + 1)] = indexData[1 * MAP_SIZE + (x + 1)];
+				}
+			}
+			// Bottom border (expanded y=65): neighbor's row 0
+			for (int x = 0; x < 64; x++) {
+				if (secDown != null) {
+					TextureImageInfo info = UOResourceManager.getLandtileTextureID(secDown.tiles[x][0].landtileGraphic);
+					indexData[65 * MAP_SIZE + (x + 1)] = (byte)addTexInfo(info, texIdxMap, uniqueTexInfos);
+				} else {
+					indexData[65 * MAP_SIZE + (x + 1)] = indexData[64 * MAP_SIZE + (x + 1)];
+				}
+			}
+			// Corners: repeat nearest edge
+			indexData[0] = indexData[1];
+			indexData[65] = indexData[64];
+			indexData[65 * MAP_SIZE] = indexData[65 * MAP_SIZE + 1];
+			indexData[65 * MAP_SIZE + 65] = indexData[65 * MAP_SIZE + 64];
+
+			// Now build Texture2DArray with ALL collected textures (including neighbor ones)
+			if (uniqueTexInfos.Count > 0) {
+				const int TARGET_SIZE = 256;
+
+				Texture2DArray texArray = new Texture2DArray(TARGET_SIZE, TARGET_SIZE, uniqueTexInfos.Count, TextureFormat.RGBA32, false);
+				texArray.wrapMode = TextureWrapMode.Repeat;
+				texArray.filterMode = FilterMode.Bilinear;
+
+				for (int i = 0; i < uniqueTexInfos.Count; i++) {
+					UOResource res = UOResourceManager.getResource(uniqueTexInfos[i], ShaderTypes.Terrain);
+					Texture2D srcTex = res.getTexture();
+
+					RenderTexture rt = RenderTexture.GetTemporary(TARGET_SIZE, TARGET_SIZE, 0, RenderTextureFormat.ARGB32);
+					Graphics.Blit(srcTex, rt);
+					RenderTexture prev = RenderTexture.active;
+					RenderTexture.active = rt;
+					Texture2D resized = new Texture2D(TARGET_SIZE, TARGET_SIZE, TextureFormat.RGBA32, false);
+					resized.ReadPixels(new Rect(0, 0, TARGET_SIZE, TARGET_SIZE), 0, 0);
+					resized.Apply();
+					RenderTexture.active = prev;
+					RenderTexture.ReleaseTemporary(rt);
+
+					texArray.SetPixelData(resized.GetRawTextureData<byte>(), 0, i);
+					Object.Destroy(resized);
+				}
+				texArray.Apply(false);
+
+				// Create index map texture (66x66)
+				Texture2D indexMap = new Texture2D(MAP_SIZE, MAP_SIZE, TextureFormat.R8, false);
+				indexMap.filterMode = FilterMode.Point;
+				indexMap.wrapMode = TextureWrapMode.Clamp;
+				indexMap.LoadRawTextureData(indexData);
+				indexMap.Apply(false);
+
+				// Per-texture repetition array (padded to 64)
+				float[] repsArray = new float[64];
+				for (int i = 0; i < uniqueTexInfos.Count && i < 64; i++) {
+					float rep = uniqueTexInfos[i].repetition;
+					repsArray[i] = (rep > 0) ? (1.0f / rep) : 0.25f;
+				}
+
+				// Create material
+				Shader shader = Shader.Find("UO/TerrainBlend");
+				if (shader == null) {
+					UOConsole.Fatal("UO/TerrainBlend shader not found");
+					shader = Shader.Find("Diffuse");
+				}
+				Material mat = new Material(shader);
+				mat.SetTexture("_TerrainTextures", texArray);
+				mat.SetTexture("_TileIndexMap", indexMap);
+				mat.SetFloat("_Repetition", 0.25f);
+				mat.SetFloat("_BlendWidth", 0.5f);
+				mat.SetFloatArray("_Repetitions", repsArray);
+				mesh.terrainMaterial = mat;
+
+				UOConsole.Debug("terrain: {0} unique textures packed into array", uniqueTexInfos.Count);
 			}
 
 			return mesh;
