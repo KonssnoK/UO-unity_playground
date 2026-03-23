@@ -1,5 +1,4 @@
-﻿using KUtility;
-using System.Drawing;
+using KUtility;
 using System.IO;
 using UnityEngine;
 
@@ -15,7 +14,7 @@ namespace UOResources {
 			public int height;
 			public TextureFormat format;
 		};
-		private ddsData _ddsData = new ddsData();//Used in the loading process
+		private ddsData _ddsData = new ddsData();
 		private Texture2D texture = null;
 		private Material material = null;
 		private string stype;
@@ -28,10 +27,11 @@ namespace UOResources {
 
 		public UOResource(byte[] raw, ShaderTypes type, bool _isLegacy) {
 			DDSImage img = new DDSImage(raw);
-			_ddsData.width = img.images[0].Width;
-			_ddsData.height = img.images[0].Height;
+			_ddsData.width = img.width;
+			_ddsData.height = img.height;
 			_ddsData.format = img.format;
-			_ddsData.rawData = ImageToByte2(img.images[0]);
+			_ddsData.rawData = img.rawTextureData;
+			isLegacy = _isLegacy;
 
 			switch (type) {
 				case ShaderTypes.Sprite: stype = "Sprites/Default"; break;
@@ -43,9 +43,10 @@ namespace UOResources {
 		public Texture2D getTexture(){
 			if (texture != null)
 				return texture;
-			
+
 			texture = new Texture2D(_ddsData.width, _ddsData.height, _ddsData.format, false);
-			texture.LoadImage(_ddsData.rawData);
+			texture.LoadRawTextureData(_ddsData.rawData);
+			texture.Apply();
 
 			return texture;
 		}
@@ -59,18 +60,6 @@ namespace UOResources {
 
 			return material;
 		}
-
-		#region TEMP
-		//THIS MUST BE CHANGED!!
-		public static byte[] ImageToByte2(Bitmap img) {
-			byte[] byteArray;
-			using (MemoryStream stream = new MemoryStream()) {
-				img.Save(stream, System.Drawing.Imaging.ImageFormat.Png);
-				byteArray = stream.ToArray();
-			}
-			return byteArray;
-		}
-		#endregion
 	}
 
 }

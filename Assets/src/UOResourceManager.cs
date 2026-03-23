@@ -147,28 +147,33 @@ namespace UOResources {
 		// the id is coming from	TILEART -> TEXTURES 
 		//					or		TERRAINDEF -> TEXTURES
 		public static UOResource getResource( Tileart tileart ){
+			if (tileart == null || tileart.textures == null) {
+				UOConsole.Fatal("getResource: tileart or textures is null");
+				return null;
+			}
 
 			UOResource resource = null;
 
 			//WorldArt Texture
-			if (tileart.textures[0].texturePresent == 1) {
+			if (tileart.textures[0] != null && tileart.textures[0].texturePresent == 1) {
 				resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
-			} 
+			}
 			//LegacyTexture
-			if (resource == null && tileart.textures[1].texturePresent == 1) {
+			if (resource == null && tileart.textures[1] != null && tileart.textures[1].texturePresent == 1) {
 				resource = getLegacyResource(tileart.textures[1].texturesArray[0]);
-			} 
+			}
 			//EnhancedTexture
 			//Is this really necessary?
 			//Light Texture
-			if (resource != null && tileart.textures[3].texturePresent == 1) {
+			if (resource != null && tileart.textures[3] != null && tileart.textures[3].texturePresent == 1) {
 				//TODO: light texture load
 			}
 			//
 			if (resource == null){
 				UOConsole.Fatal("texture is not present {0}", tileart.id);
 				tileart = UOResourceManager.getTileart(1);
-				resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
+				if (tileart != null && tileart.textures[0] != null && tileart.textures[0].texturePresent == 1)
+					resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
 			}
 
 			return resource;

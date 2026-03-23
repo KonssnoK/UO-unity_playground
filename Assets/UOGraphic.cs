@@ -1,5 +1,4 @@
-﻿using System;
-using UnityEngine;
+﻿using UnityEngine;
 using UOResources;
 
 public class UOGraphic : MonoBehaviour {
@@ -8,7 +7,7 @@ public class UOGraphic : MonoBehaviour {
 	void Start () {
 		UOConsole.Init();
 
-		Console.WriteLine("Starting UOP preload..");
+		UnityEngine.Debug.Log("Starting UOP preload..");
 		UOResourceManager.loadUOPs();
 		SectorsLoader.startLoader();
 		//1367 is the britain cemetery
@@ -18,8 +17,17 @@ public class UOGraphic : MonoBehaviour {
 	//private UOFacetManager.Position playerPos = new UOFacetManager.Position(1400, 1500);
 
 	// Update is called once per frame
+	private bool _loggedPlayerNull = false;
 	void Update () {
-		UOFacetManager.updateMap(playerScript.getPlayer().position);
+		playerScript player = playerScript.getPlayer();
+		if (player == null) {
+			if (!_loggedPlayerNull) {
+				UnityEngine.Debug.LogWarning("playerScript.getPlayer() is null - is the playerScript component attached to the Player GameObject?");
+				_loggedPlayerNull = true;
+			}
+			return;
+		}
+		UOFacetManager.updateMap(player.position);
 	}
 
 

@@ -25,6 +25,8 @@ namespace UOResources {
 			tileart = UOResourceManager.getTileart(spriteID);
 			resource = UOResourceManager.getResource(tileart);
 
+			if (resource == null || tileart == null) return;
+
 			if (resource.isLegacy) {
 				_imageOffset = tileart.offset2D;
 			} else
@@ -61,8 +63,15 @@ namespace UOResources {
 				flipped = true;
 			}
 
+			int texH = resource.getTexture().height;
+			float rectY = texH - _imageOffset.Yend;
+			if (rectY < 0) rectY = 0;
+			if (rectY + height > texH) height = texH - rectY;
+			if (_imageOffset.Xstart + width > resource.getTexture().width)
+				width = resource.getTexture().width - _imageOffset.Xstart;
+
 			drawSprite = Sprite.Create(resource.getTexture(),
-							new Rect(_imageOffset.Xstart, resource.getTexture().height - _imageOffset.Yend,
+							new Rect(_imageOffset.Xstart, rectY,
 										width, height),
 							new Vector2(0, 0)
 						);

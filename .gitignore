@@ -1,0 +1,36 @@
+# Unity generated
+Library/
+Temp/
+Obj/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# Build results
+[Bb]uild/
+[Bb]uilds/
+
+# IDE
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.suo
+*.user
+*.pidb
+*.booproj
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Unity asset store
+sysinfo.txt
+
+# Crashlytics
+crashlytics-build.properties
+
+# UOP game data (large binary files, not for version control)
+Assets/UOPs/*.uop
+Assets/Plugins/Zlib32.dll
