@@ -13,7 +13,7 @@ public class playerScript : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
 		_player = this;
-		position = new UOFacetManager.Position(1400, 1500);
+		position = new UOFacetManager.Position(1500, 1500);
 		float realx = (-position.y * 0.5f + position.x * 0.5f) / 1.6525f;
 		float realy = (-position.y * 0.5f - position.x * 0.5f) / 1.6525f;
 		this.transform.Translate(new Vector3(realx, realy));

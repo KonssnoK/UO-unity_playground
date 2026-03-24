@@ -9,7 +9,7 @@ namespace UOReader {
 		public uint textureIDX; //String dictionary index of the texture path
 		public byte unk4;
 		public float repetition;//How many times the texture should be replicated in a single image
-		public int unk6;
+		public int textureSlot;//0=alpha, 1=diffuse, 2=cubemap
 		public int unk7;
 		public TextureImageInfo() {
 		}
@@ -45,7 +45,7 @@ namespace UOReader {
 					t.texturesArray[i].textureIDX = r.ReadUInt32();//String Dictionary Offset
 					t.texturesArray[i].unk4 = r.ReadByte();
 					t.texturesArray[i].repetition = r.ReadSingle();//Float
-					t.texturesArray[i].unk6 = r.ReadInt32();
+					t.texturesArray[i].textureSlot = r.ReadInt32();
 					t.texturesArray[i].unk7 = r.ReadInt32();
 				}
 				t.count2 = r.ReadUInt32();

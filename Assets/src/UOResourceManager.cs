@@ -159,7 +159,18 @@ namespace UOResources {
 
 			//WorldArt Texture
 			if (tileart.textures[0] != null && tileart.textures[0].texturePresent == 1) {
-				resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
+				// For water statics (Wet flag), pick the diffuse texture (textureSlot=1)
+				// instead of texturesArray[0] which is the alpha/normal map
+				TextureImageInfo texInfo = tileart.textures[0].texturesArray[0];
+				if ((tileart.flags & TileFlag.Wet) != 0 && tileart.textures[0].texturesCount > 1) {
+					for (int ti = 0; ti < tileart.textures[0].texturesCount; ti++) {
+						if (tileart.textures[0].texturesArray[ti].textureSlot == 1) {
+							texInfo = tileart.textures[0].texturesArray[ti];
+							break;
+						}
+					}
+				}
+				resource = getResource(texInfo, ShaderTypes.Sprite);
 			}
 			//LegacyTexture
 			if (resource == null && tileart.textures[1] != null && tileart.textures[1].texturePresent == 1) {
@@ -175,15 +186,27 @@ namespace UOResources {
 			}
 			//
 			if (resource == null){
-				UOConsole.Fatal("texture is not present {0} (slots: WA={1} Leg={2} Enh={3} Lgt={4})",
-					tileart.id,
+				// Items with no textures at all (incomplete tileart parse) — use water placeholder
+				bool allSlotsNull = (tileart.textures[0] == null || tileart.textures[0].texturePresent == 0)
+					&& (tileart.textures[1] == null || tileart.textures[1].texturePresent == 0)
+					&& (tileart.textures[2] == null || tileart.textures[2].texturePresent == 0);
+				if (allSlotsNull) {
+					UOConsole.Debug("static {0} no textures (flags=0x{1:X}) using water placeholder", tileart.id, (ulong)tileart.flags);
+					return UOResource.WaterResource;
+				}
+				// Has texture slots but loading failed — log details
+				UOConsole.Fatal("static {0} texture LOAD FAILED (flags=0x{1:X}) WA_present={2} Leg_present={3} Enh_present={4}",
+					tileart.id, (ulong)tileart.flags,
 					tileart.textures[0] != null ? tileart.textures[0].texturePresent : -1,
 					tileart.textures[1] != null ? tileart.textures[1].texturePresent : -1,
-					tileart.textures[2] != null ? tileart.textures[2].texturePresent : -1,
-					tileart.textures[3] != null ? tileart.textures[3].texturePresent : -1);
-				tileart = UOResourceManager.getTileart(1);
-				if (tileart != null && tileart.textures[0] != null && tileart.textures[0].texturePresent == 1)
-					resource = getResource(tileart.textures[0].texturesArray[0], ShaderTypes.Sprite);
+					tileart.textures[2] != null ? tileart.textures[2].texturePresent : -1);
+				// Log what textureIDX they reference
+				if (tileart.textures[0] != null && tileart.textures[0].texturePresent == 1 && tileart.textures[0].texturesArray != null)
+					UOConsole.Fatal("  WA[0] textureIDX={0}", tileart.textures[0].texturesArray[0].textureIDX);
+				if (tileart.textures[1] != null && tileart.textures[1].texturePresent == 1 && tileart.textures[1].texturesArray != null)
+					UOConsole.Fatal("  Leg[0] textureIDX={0}", tileart.textures[1].texturesArray[0].textureIDX);
+				if (tileart.textures[2] != null && tileart.textures[2].texturePresent == 1 && tileart.textures[2].texturesArray != null)
+					UOConsole.Fatal("  Enh[0] textureIDX={0}", tileart.textures[2].texturesArray[0].textureIDX);
 			}
 
 			return resource;
@@ -320,6 +343,43 @@ namespace UOResources {
 
 			//Returns the texture according to subtype
 			return td.textures.texturesArray[landtileID.newSubtype];
+		}
+
+		/// <summary>
+		/// Returns the full TerrainDefinition for a landtile (for debugging/inspection)
+		/// </summary>
+		public static TerrainDefinition getTerrainDefinition(uint legacyLandtileID) {
+			if (!legacyTerrainMap.ContainsKey(legacyLandtileID))
+				return null;
+			legacyTerrainMap_t landtileID = legacyTerrainMap[legacyLandtileID];
+			ulong hash = HashDictionary.HashFileName(string.Format("build/terraindefinition/{0}.bin", landtileID.newID));
+			if (!uopHashes.terrainHashes.ContainsKey(hash))
+				return null;
+			uopMapping_t pos = uopHashes.terrainHashes[hash];
+			MythicPackage _uop = MythicPackageCache.Get(fileDirectory + "TerrainDefinition.uop");
+			byte[] raw = _uop.Blocks[pos.block].Files[pos.file].Unpack(_uop.FileInfo.FullName);
+			using (MemoryStream ms = new MemoryStream(raw)) {
+				using (BinaryReader r = new BinaryReader(ms)) {
+					return TerrainDefinition.readTerrainDefinition(r);
+				}
+			}
+		}
+
+		/// <summary>
+		/// Returns the subtype index from legacyTerrainMap for a landtile
+		/// </summary>
+		public static int getLandtileSubtype(uint legacyLandtileID) {
+			if (!legacyTerrainMap.ContainsKey(legacyLandtileID))
+				return -1;
+			return (int)legacyTerrainMap[legacyLandtileID].newSubtype;
+		}
+
+		/// <summary>
+		/// Resolves a string dictionary index to its string value
+		/// </summary>
+		public static string getStringDictValue(uint idx) {
+			if (idx >= stringDictionary.count) return null;
+			return stringDictionary.values[idx];
 		}
 
 		/// <summary>

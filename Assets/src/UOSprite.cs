@@ -18,12 +18,26 @@ namespace UOResources {
 		protected bool _flipped = false;
 		public Tileart tileart = null;
 		private TileartImageOffset _imageOffset;
+		protected bool _isWet = false;
+
+		// Shared water material for all wet statics
+		private static Material _waterMaterial;
+		private static Material getWaterMaterial() {
+			if (_waterMaterial != null) return _waterMaterial;
+			Shader shader = Shader.Find("UO/WaterSprite");
+			if (shader == null) return null;
+			_waterMaterial = new Material(shader);
+			_waterMaterial.SetTexture("_MainTex", Texture2D.whiteTexture); // will be overridden by sprite
+			return _waterMaterial;
+		}
 
 		public UOSprite(uint spriteID) {
 			tileart = UOResourceManager.getTileart(spriteID);
 			resource = UOResourceManager.getResource(tileart);
 
 			if (resource == null || tileart == null) return;
+
+			_isWet = (tileart.flags & TileFlag.Wet) != 0;
 
 			if (resource.isLegacy) {
 				_imageOffset = tileart.offset2D;
@@ -41,6 +55,18 @@ namespace UOResources {
 
 			if (resource == null) return null;
 
+			int texH = resource.getTexture().height;
+			int texW = resource.getTexture().width;
+
+			// Generated resources (water placeholder): use full texture as a flat tile
+			if (resource.isGenerated) {
+				_flipped = true;
+				drawSprite = Sprite.Create(resource.getTexture(),
+								new Rect(0, 0, texW, texH),
+								new Vector2(0, 0));
+				return drawSprite;
+			}
+
 			float width = _imageOffset.Xend - _imageOffset.Xstart;
 			float height = _imageOffset.Yend;
 
@@ -49,9 +75,7 @@ namespace UOResources {
 				_flipped = true;
 			}
 
-			int texH = resource.getTexture().height;
-			int texW = resource.getTexture().width;
-			float rectY = texH - _imageOffset.Yend;
+			float rectY = texH - height;
 			if (rectY < 0) rectY = 0;
 			if (rectY + height > texH) height = texH - rectY;
 			if (_imageOffset.Xstart + width > texW)
@@ -71,8 +95,23 @@ namespace UOResources {
 
 		public virtual GameObject getDrawItem(int x, int y, int z, int worldX, int worldY, int drawLayer) {
 			Sprite sprite = getOrCreateSprite();
-			if (sprite == null)
-				return new GameObject(tileart != null ? tileart.id.ToString() : "null");
+			if (sprite == null) {
+				// Debug: create a visible magenta marker for statics with no sprite
+				GameObject dbg = new GameObject(tileart != null ? "DBG_" + tileart.id.ToString() : "DBG_null");
+				float dz = z * 6 / UOEC_SIZE;
+				int dx = x + worldX, dy = y + worldY;
+				float drx = ((-dy * 0.5f + dx * 0.5f) - 0.5f) / 1.6525f;
+				float dry = ((-dy * 0.5f - dx * 0.5f) - 0.5f + dz) / 1.6525f;
+				dbg.transform.Translate(drx, dry, 0);
+				SpriteRenderer dbgR = dbg.AddComponent<SpriteRenderer>();
+				// Create a small colored square sprite
+				Texture2D dbgTex = new Texture2D(2, 2);
+				dbgTex.SetPixels(new Color[] { Color.magenta, Color.magenta, Color.magenta, Color.magenta });
+				dbgTex.Apply();
+				dbgR.sprite = Sprite.Create(dbgTex, new Rect(0, 0, 2, 2), new Vector2(0.5f, 0.5f), 4f);
+				dbgR.sortingOrder = dx + dy + z + drawLayer;
+				return dbg;
+			}
 
 			float squareRoot = Mathf.Sqrt(2.0f);
 			float realz = z * 6 / (UOEC_SIZE);
@@ -97,6 +136,14 @@ namespace UOResources {
 			SpriteRenderer r = toret.AddComponent<SpriteRenderer>();
 			r.sprite = sprite;
 			r.sortingOrder = x + y + z + drawLayer;
+
+			// Water statics: use animated water material
+			if (_isWet) {
+				Material wmat = getWaterMaterial();
+				if (wmat != null)
+					r.material = wmat;
+			}
+
 			return toret;
 		}
 	}

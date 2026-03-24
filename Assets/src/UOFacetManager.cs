@@ -228,9 +228,11 @@ namespace UOResources {
 			// Collect unique textures and build tile→index mapping
 			Dictionary<uint, int> texIdxMap = new Dictionary<uint, int>();
 			List<TextureImageInfo> uniqueTexInfos = new List<TextureImageInfo>();
-			List<bool> isWaterTexture = new List<bool>();
 			int[,] tileTexIdx = new int[64, 64];
-			int waterTexIdx = -1; // index of the generated water color texture
+			int waterTexIdx = -1; // index of the water diffuse texture
+			TextureImageInfo waterAlphaInfo = null; // water alpha/blend mask (textureSlot=0)
+
+			HashSet<string> loggedShaders = new HashSet<string>(); // dump first TD per shader type
 
 			// Debug: track unique shader names in this sector
 			Dictionary<string, int> shaderCounts = new Dictionary<string, int>();
@@ -257,21 +259,64 @@ namespace UOResources {
 					}
 					bool isWater = shaderName != null && shaderName.Contains("Water");
 
+					// Always resolve the diffuse texture from the TerrainDefinition
+					// rather than trusting texturesArray[subtype] directly.
+					// Water shaders: diffuse is textureSlot=1
+					// Default shaders: diffuse is textureSlot=0
+					TextureImageInfo diffuseInfo = info; // fallback
+					uint graphic = fs.tiles[x][y].landtileGraphic;
+					TerrainDefinition td = UOResourceManager.getTerrainDefinition(graphic);
+					if (td != null && td.textures != null) {
+						string shaderKey = shaderName ?? "null";
+						// Log full TD dump for each unique shader name
+						if (!loggedShaders.Contains(shaderKey)) {
+							loggedShaders.Add(shaderKey);
+							int subtype = UOResourceManager.getLandtileSubtype(graphic);
+							UOConsole.Debug("TD DUMP shader=\"{0}\" graphic={1} subtype={2} texCount={3}",
+								shaderKey, graphic, subtype, td.textures.texturesCount);
+							for (int ti2 = 0; ti2 < td.textures.texturesCount; ti2++) {
+								TextureImageInfo tii = td.textures.texturesArray[ti2];
+								UOConsole.Debug("  tex[{0}]: slot={1} idx={2} \"{3}\" rep={4}",
+									ti2, tii.textureSlot, tii.textureIDX,
+									UOResourceManager.getStringDictValue(tii.textureIDX),
+									tii.repetition);
+							}
+							UOConsole.Debug("  subtype selects tex[{0}]: slot={1} \"{2}\"",
+								subtype, info.textureSlot,
+								UOResourceManager.getStringDictValue(info.textureIDX));
+						}
+
+						int diffuseSlot = isWater ? 1 : 0;
+						for (int ti2 = 0; ti2 < td.textures.texturesCount; ti2++) {
+							if (td.textures.texturesArray[ti2].textureSlot == diffuseSlot) {
+								diffuseInfo = td.textures.texturesArray[ti2];
+								break;
+							}
+						}
+					}
+
 					if (isWater) {
-						// All water tiles share one generated water color texture
 						if (waterTexIdx < 0) {
 							waterTexIdx = uniqueTexInfos.Count;
-							uniqueTexInfos.Add(info); // placeholder, will be replaced with generated texture
-							isWaterTexture.Add(true);
+							texIdxMap[diffuseInfo.textureIDX] = waterTexIdx;
+							uniqueTexInfos.Add(diffuseInfo);
+							// Capture the alpha mask texture (textureSlot=0)
+							if (td != null && td.textures != null) {
+								for (int ti3 = 0; ti3 < td.textures.texturesCount; ti3++) {
+									if (td.textures.texturesArray[ti3].textureSlot == 0) {
+										waterAlphaInfo = td.textures.texturesArray[ti3];
+										break;
+									}
+								}
+							}
 						}
 						tileTexIdx[x, y] = waterTexIdx;
 					} else {
 						int arrayIdx;
-						if (!texIdxMap.TryGetValue(info.textureIDX, out arrayIdx)) {
+						if (!texIdxMap.TryGetValue(diffuseInfo.textureIDX, out arrayIdx)) {
 							arrayIdx = uniqueTexInfos.Count;
-							texIdxMap[info.textureIDX] = arrayIdx;
-							uniqueTexInfos.Add(info);
-							isWaterTexture.Add(false);
+							texIdxMap[diffuseInfo.textureIDX] = arrayIdx;
+							uniqueTexInfos.Add(diffuseInfo);
 						}
 						tileTexIdx[x, y] = arrayIdx;
 					}
@@ -315,17 +360,39 @@ namespace UOResources {
 				TextureImageInfo info = UOResourceManager.getLandtileTextureID(graphic);
 				if (info == null) return -1;
 				string sn = UOResourceManager.getLandtileShaderName(graphic);
-				if (sn != null && sn.Contains("Water")) {
+				bool nIsWater = sn != null && sn.Contains("Water");
+
+				// Resolve diffuse texture (same logic as main loop)
+				TextureImageInfo nDiffuse = info;
+				TerrainDefinition ntd = UOResourceManager.getTerrainDefinition(graphic);
+				if (ntd != null && ntd.textures != null) {
+					int dSlot = nIsWater ? 1 : 0;
+					for (int ti2 = 0; ti2 < ntd.textures.texturesCount; ti2++) {
+						if (ntd.textures.texturesArray[ti2].textureSlot == dSlot) {
+							nDiffuse = ntd.textures.texturesArray[ti2];
+							break;
+						}
+					}
+				}
+
+				if (nIsWater) {
 					if (waterTexIdx < 0) {
 						waterTexIdx = uniqueTexInfos.Count;
-						uniqueTexInfos.Add(info);
-						isWaterTexture.Add(true);
+						texIdxMap[nDiffuse.textureIDX] = waterTexIdx;
+						uniqueTexInfos.Add(nDiffuse);
+						// Capture water alpha mask from neighbor
+						if (waterAlphaInfo == null && ntd != null && ntd.textures != null) {
+							for (int ti3 = 0; ti3 < ntd.textures.texturesCount; ti3++) {
+								if (ntd.textures.texturesArray[ti3].textureSlot == 0) {
+									waterAlphaInfo = ntd.textures.texturesArray[ti3];
+									break;
+								}
+							}
+						}
 					}
 					return waterTexIdx;
 				}
-				int idx = addTexInfo(info, texIdxMap, uniqueTexInfos);
-				while (isWaterTexture.Count < uniqueTexInfos.Count)
-					isWaterTexture.Add(false);
+				int idx = addTexInfo(nDiffuse, texIdxMap, uniqueTexInfos);
 				return idx;
 			};
 
@@ -384,57 +451,74 @@ namespace UOResources {
 			if (uniqueTexInfos.Count > 0) {
 				const int TARGET_SIZE = 256;
 
-				Texture2DArray texArray = new Texture2DArray(TARGET_SIZE, TARGET_SIZE, uniqueTexInfos.Count, TextureFormat.RGBA32, false);
+				Texture2DArray texArray = new Texture2DArray(TARGET_SIZE, TARGET_SIZE, uniqueTexInfos.Count, TextureFormat.RGBA32, false, false);
 				texArray.wrapMode = TextureWrapMode.Repeat;
 				texArray.filterMode = FilterMode.Bilinear;
 
-				// Generate a solid water color texture
-				Texture2D waterTex = null;
-				if (waterTexIdx >= 0) {
-					waterTex = new Texture2D(TARGET_SIZE, TARGET_SIZE, TextureFormat.RGBA32, false);
-					Color32 waterColor = new Color32(0, 40, 90, 255);
-					var waterPixels = waterTex.GetPixelData<Color32>(0);
-					for (int p = 0; p < waterPixels.Length; p++)
-						waterPixels[p] = waterColor;
-					waterTex.Apply();
-				}
-
+				UOConsole.Debug("texArray build: {0} textures, waterTexIdx={1}", uniqueTexInfos.Count, waterTexIdx);
 				for (int i = 0; i < uniqueTexInfos.Count; i++) {
-					Texture2D srcTex;
+					string texName = UOResourceManager.getStringDictValue(uniqueTexInfos[i].textureIDX);
+					UOResource res = UOResourceManager.getResource(uniqueTexInfos[i], ShaderTypes.Terrain);
+					Texture2D srcTex = (res != null) ? res.getTexture() : Texture2D.whiteTexture;
+					UOConsole.Debug("  [{0}] \"{1}\" fmt={2} {3}x{4}", i, texName,
+						srcTex.format, srcTex.width, srcTex.height);
 
-					if (i < isWaterTexture.Count && isWaterTexture[i] && waterTex != null) {
-						// Water tile: use generated solid color instead of normal map
-						srcTex = waterTex;
-					} else {
-						UOResource res = UOResourceManager.getResource(uniqueTexInfos[i], ShaderTypes.Terrain);
-						if (res == null) {
-							// Fallback: use water texture or skip
-							srcTex = waterTex != null ? waterTex : Texture2D.whiteTexture;
-						} else {
-							srcTex = res.getTexture();
-						}
-					}
-
-					RenderTexture rt = RenderTexture.GetTemporary(TARGET_SIZE, TARGET_SIZE, 0, RenderTextureFormat.ARGB32);
+					// Normalize to TARGET_SIZE RGBA32 via RenderTexture blit
+					RenderTexture rt = RenderTexture.GetTemporary(TARGET_SIZE, TARGET_SIZE, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
 					Graphics.Blit(srcTex, rt);
 					RenderTexture prev = RenderTexture.active;
 					RenderTexture.active = rt;
-					Texture2D resized = new Texture2D(TARGET_SIZE, TARGET_SIZE, TextureFormat.RGBA32, false);
+					Texture2D resized = new Texture2D(TARGET_SIZE, TARGET_SIZE, TextureFormat.RGBA32, false, false);
 					resized.ReadPixels(new Rect(0, 0, TARGET_SIZE, TARGET_SIZE), 0, 0);
 					resized.Apply();
 					RenderTexture.active = prev;
 					RenderTexture.ReleaseTemporary(rt);
 
-					texArray.SetPixelData(resized.GetRawTextureData<byte>(), 0, i);
+					texArray.SetPixels32(resized.GetPixels32(), i);
 					Object.Destroy(resized);
 				}
-
-				if (waterTex != null)
-					Object.Destroy(waterTex);
 				texArray.Apply(false);
 
+				// DEBUG: scan each slice for purple pixels (normal map signature)
+				for (int si = 0; si < uniqueTexInfos.Count; si++) {
+					Color32[] pixels = texArray.GetPixels32(si);
+					Color32 px = pixels[128 * 256 + 128];
+					int purpleCount = 0;
+					long rSum = 0, gSum = 0, bSum = 0;
+					for (int p = 0; p < pixels.Length; p++) {
+						rSum += pixels[p].r; gSum += pixels[p].g; bSum += pixels[p].b;
+						if (pixels[p].b > 180 && pixels[p].r > 90 && pixels[p].r < 180 && pixels[p].g > 90 && pixels[p].g < 180)
+							purpleCount++;
+					}
+					int cnt = pixels.Length;
+					UOConsole.Debug("  slice[{0}] center=({1},{2},{3},{4}) avg=({5},{6},{7}) purple={8}/{9}",
+						si, px.r, px.g, px.b, px.a,
+						rSum/cnt, gSum/cnt, bSum/cnt, purpleCount, cnt);
+				}
+
+				// DEBUG: check for out-of-bounds indices
+				int oobCount = 0;
+				int[] idxHistogram = new int[uniqueTexInfos.Count + 1]; // last bucket = OOB
+				for (int pi = 0; pi < indexData.Length; pi++) {
+					int val = indexData[pi];
+					if (val >= uniqueTexInfos.Count) {
+						oobCount++;
+						idxHistogram[uniqueTexInfos.Count]++;
+					} else {
+						idxHistogram[val]++;
+					}
+				}
+				if (oobCount > 0)
+					UOConsole.Debug("INDEX OOB: {0} pixels have index >= {1}!", oobCount, uniqueTexInfos.Count);
+				string hist = "INDEX HIST: ";
+				for (int hi = 0; hi < idxHistogram.Length; hi++) {
+					if (idxHistogram[hi] > 0)
+						hist += string.Format("[{0}={1}] ", hi == uniqueTexInfos.Count ? "OOB" : hi.ToString(), idxHistogram[hi]);
+				}
+				UOConsole.Debug(hist);
+
 				// Create index map texture (66x66)
-				Texture2D indexMap = new Texture2D(MAP_SIZE, MAP_SIZE, TextureFormat.R8, false);
+				Texture2D indexMap = new Texture2D(MAP_SIZE, MAP_SIZE, TextureFormat.R8, false, true);
 				indexMap.filterMode = FilterMode.Point;
 				indexMap.wrapMode = TextureWrapMode.Clamp;
 				indexMap.LoadRawTextureData(indexData);
@@ -459,6 +543,19 @@ namespace UOResources {
 				mat.SetFloat("_Repetition", 0.25f);
 				mat.SetFloat("_BlendWidth", 0.5f);
 				mat.SetFloatArray("_Repetitions", repsArray);
+				mat.SetInt("_WaterTexIdx", waterTexIdx);
+
+				// Load water alpha mask texture if available
+				if (waterAlphaInfo != null) {
+					UOResource alphaRes = UOResourceManager.getResource(waterAlphaInfo, ShaderTypes.Terrain);
+					if (alphaRes != null) {
+						Texture2D alphaTex = alphaRes.getTexture();
+						mat.SetTexture("_WaterAlpha", alphaTex);
+						UOConsole.Debug("Water alpha mask loaded: {0}",
+							UOResourceManager.getStringDictValue(waterAlphaInfo.textureIDX));
+					}
+				}
+
 				mesh.terrainMaterial = mat;
 
 				UOConsole.Debug("terrain: {0} unique textures packed into array", uniqueTexInfos.Count);
