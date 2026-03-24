@@ -2,6 +2,21 @@
 
 Tile art contains informations about each single object existing in Ultima Online. This is valid for items but also for mobiles.
 
+# Known Flags (from UOSA.exe) #
+
+The FLAGS QWORD contains these tile flags (parsed from tileart.uop XML attribute names in the EXE):
+
+```
+background, wall, translucent, transparent, damaging, impassable, wet,
+ignored, surface, bridge, generic, window, noshoot, article_a, article_an,
+article_the, article, foliage, partialhue, nohouse, usenewart, container,
+wearable, lightsource, animation, hover_over, nodraw, art_used, armor,
+roof, door, stair_back, stair_right, alphablend, noshadow, pixelbleed,
+playAnimOnce, multiMovable
+```
+
+The `wet` flag (TileFlag.Wet = 0x00000080) identifies water statics. Water statics use textureSlot=1 for diffuse color (not slot 0 which is the DuDv bump map).
+
 # Inner Extension #
 
 ```
@@ -25,14 +40,14 @@ Tile art contains informations about each single object existing in Ultima Onlin
 -DWORD
 -BYTE
 -DWORD		->float 1.0? NOT float 3F800000
--DWORD		
+-DWORD
 -DWORD		->float LightRelated
 -DWORD		->float LightRelated
 -DWORD
--QWORD		FLAGS
+-QWORD		FLAGS (see flag list above)
 -QWORD		FLAGS -> Got more data !
 -DWORD
--B[24]		EC IMAGE Offset
+-B[24]		EC IMAGE Offset (offX, offY, Xstart, Xend, Yend, padding)
 -B[24]		2D IMAGE Offset
 
 // Props
@@ -91,7 +106,7 @@ if( Count > 0 ){
 					-DWORD
 					-DWORD
 				}while(SubCount-- != 1)
-			}	
+			}
 		}
 	}while(Count-- != 1)
 }
@@ -122,9 +137,9 @@ call TEXTURES()					SUB_9_7 DATA\TEXTURES
 -BYTE Count				SUB_9_8
 if( Count > 0 ){
 	do{
-		-DWORD		EffectID						
+		-DWORD		EffectID
 		call 4_6_30_Sub
-		
+
 		FUNCTION		//EFFECT
 		//Could be
 		//- 00 -> Unk_3
