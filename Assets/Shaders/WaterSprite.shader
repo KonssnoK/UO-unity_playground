@@ -6,9 +6,8 @@ Shader "UO/WaterSprite" {
         _Tint ("Water Tint", Color) = (0.05, 0.3, 0.5, 0.85)
     }
     SubShader {
-        Tags { "Queue"="Transparent" "RenderType"="Transparent" "IgnoreProjector"="True" }
-        Blend SrcAlpha OneMinusSrcAlpha
-        ZWrite Off
+        Tags { "Queue"="Geometry-10" "RenderType"="Opaque" }
+        ZWrite On
         Cull Off
 
         Pass {
@@ -66,7 +65,7 @@ Shader "UO/WaterSprite" {
 
                 // Subtle brightness variation from alpha mask
                 water.rgb *= 0.85 + alphaMask * 0.3;
-                water.a = _Tint.a;
+                water.a = 1.0;
 
                 return water * i.color;
             }

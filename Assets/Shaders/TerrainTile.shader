@@ -127,46 +127,44 @@ Shader "UO/TerrainBlend" {
                     idx00 == _WaterTexIdx || idx10 == _WaterTexIdx ||
                     idx01 == _WaterTexIdx || idx11 == _WaterTexIdx);
 
+                // Discard pure water pixels — water sprites render behind mesh
+                // and show through these holes. Keep coast blend pixels.
+                if (_WaterTexIdx >= 0 && idx00 == _WaterTexIdx &&
+                    idx10 == _WaterTexIdx && idx01 == _WaterTexIdx && idx11 == _WaterTexIdx) {
+                    discard;
+                }
+
                 // Early out: if all 4 are the same, no blend needed
                 if (idx00 == idx10 && idx10 == idx01 && idx01 == idx11) {
-                    return sampleTerrainOrWater(i.uv, idx00);
+                    return sampleTerrain(i.uv, idx00);
                 }
 
                 // Sharpen blend for non-water edges
                 float2 bf = smoothstep(0.5 - _BlendWidth, 0.5 + _BlendWidth, f);
 
                 if (anyWater) {
-                    // Water-land blending: use the water alpha mask
-                    // Alpha mask tiles at high frequency (rep=16) for organic coastline
-                    float t = _Time.y * _WaterSpeed;
-                    float2 alphaUV = i.uv * (1.0 / 16.0) + float2(t * 0.5, t * 0.3);
-                    float alphaMask = tex2D(_WaterAlpha, alphaUV).r;
-
-                    // Build weights: how much of each corner is water?
+                    // Coast edge: some corners are water, some are land.
+                    // Discard water-heavy pixels (water sprites show through),
+                    // render land-heavy pixels as terrain.
                     float w00 = (idx00 == _WaterTexIdx) ? 1.0 : 0.0;
                     float w10 = (idx10 == _WaterTexIdx) ? 1.0 : 0.0;
                     float w01 = (idx01 == _WaterTexIdx) ? 1.0 : 0.0;
                     float w11 = (idx11 == _WaterTexIdx) ? 1.0 : 0.0;
 
-                    // Bilinear interpolation of water weight
                     float topW = lerp(w00, w10, bf.x);
                     float botW = lerp(w01, w11, bf.x);
                     float waterWeight = lerp(topW, botW, bf.y);
 
-                    // Modulate by alpha mask for organic shoreline edge
-                    waterWeight = smoothstep(0.2, 0.8, waterWeight * alphaMask + waterWeight * 0.5);
+                    // Discard where mostly water — let water sprites show through
+                    if (waterWeight > 0.5) discard;
 
-                    // Sample land and water
-                    // Find a land index for the land side
+                    // Render land texture for the land portion
                     int landIdx = idx00;
                     if (landIdx == _WaterTexIdx) landIdx = idx10;
                     if (landIdx == _WaterTexIdx) landIdx = idx01;
                     if (landIdx == _WaterTexIdx) landIdx = idx11;
 
-                    fixed4 landColor = sampleTerrain(i.uv, landIdx);
-                    fixed4 waterColor = sampleWater(i.uv);
-
-                    return lerp(landColor, waterColor, waterWeight);
+                    return sampleTerrain(i.uv, landIdx);
                 }
 
                 // Standard terrain blending (no water involved)

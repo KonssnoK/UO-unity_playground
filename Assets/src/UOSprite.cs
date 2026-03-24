@@ -19,6 +19,7 @@ namespace UOResources {
 		public Tileart tileart = null;
 		private TileartImageOffset _imageOffset;
 		protected bool _isWet = false;
+		public bool isWet => _isWet;
 
 		// Shared water material for all wet statics
 		private static Material _waterMaterial;
@@ -46,6 +47,7 @@ namespace UOResources {
 
 			_drawOffsetX = tileart.offsetEC.offX / UOEC_SIZE;
 			_drawOffsetY = tileart.offsetEC.offY / UOEC_SIZE;
+
 		}
 
 		// Create the sprite once and cache it — called lazily on main thread
@@ -58,8 +60,8 @@ namespace UOResources {
 			int texH = resource.getTexture().height;
 			int texW = resource.getTexture().width;
 
-			// Generated resources (water placeholder): use full texture as a flat tile
-			if (resource.isGenerated) {
+			// Generated resources (water placeholder) or wet statics: use full texture as flat tile
+			if (resource.isGenerated || _isWet) {
 				_flipped = true;
 				drawSprite = Sprite.Create(resource.getTexture(),
 								new Rect(0, 0, texW, texH),
@@ -126,7 +128,11 @@ namespace UOResources {
 			realx /= 1.6525f;
 			realy /= 1.6525f;
 
-			toret.transform.Translate(realx, realy, 0);
+			// Water sprites sit just behind the terrain zero-elevation plane.
+			// Terrain world z ≈ 100 / (sqrt(2)*1.6525) ≈ 42.8 for flat tiles.
+			// Elevated terrain has lower world z (closer to camera) → occludes water via depth test.
+			float posz = _isWet ? 43.5f : 0f;
+			toret.transform.Translate(realx, realy, posz);
 
 			if (_flipped) {
 				toret.transform.Rotate(0, 0, -45.0f);
@@ -135,13 +141,15 @@ namespace UOResources {
 
 			SpriteRenderer r = toret.AddComponent<SpriteRenderer>();
 			r.sprite = sprite;
-			r.sortingOrder = x + y + z + drawLayer;
 
-			// Water statics: use animated water material
 			if (_isWet) {
+				// Water statics: render before terrain (Geometry-10 queue), terrain overwrites on top
+				r.sortingOrder = x + y + z;
 				Material wmat = getWaterMaterial();
 				if (wmat != null)
 					r.material = wmat;
+			} else {
+				r.sortingOrder = x + y + z + drawLayer;
 			}
 
 			return toret;
