@@ -34,3 +34,7 @@ crashlytics-build.properties
 # UOP game data (large binary files, not for version control)
 Assets/UOPs/*.uop
 Assets/Plugins/Zlib32.dll
+
+Assets/Shaders/EC_Analysis/
+
+Assets/Shaders/EC_Shaders/

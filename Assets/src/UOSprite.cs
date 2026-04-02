@@ -28,8 +28,32 @@ namespace UOResources {
 			Shader shader = Shader.Find("UO/WaterSprite");
 			if (shader == null) return null;
 			_waterMaterial = new Material(shader);
-			_waterMaterial.SetTexture("_MainTex", Texture2D.whiteTexture); // will be overridden by sprite
+			_waterMaterial.SetTexture("_MainTex", Texture2D.whiteTexture);
 			return _waterMaterial;
+		}
+
+		// Shared quad mesh for water tiles (unit quad, 1x1)
+		private static Mesh _waterQuadMesh;
+		private static Mesh getWaterQuadMesh() {
+			if (_waterQuadMesh != null) return _waterQuadMesh;
+			_waterQuadMesh = new Mesh();
+			_waterQuadMesh.vertices = new Vector3[] {
+				new Vector3(0, 0, 0),
+				new Vector3(1, 0, 0),
+				new Vector3(0, -1, 0),
+				new Vector3(1, -1, 0)
+			};
+			_waterQuadMesh.uv = new Vector2[] {
+				new Vector2(0, 1),
+				new Vector2(1, 1),
+				new Vector2(0, 0),
+				new Vector2(1, 0)
+			};
+			_waterQuadMesh.triangles = new int[] { 0, 1, 2, 1, 3, 2 };
+			_waterQuadMesh.normals = new Vector3[] {
+				Vector3.back, Vector3.back, Vector3.back, Vector3.back
+			};
+			return _waterQuadMesh;
 		}
 
 		public UOSprite(uint spriteID) {
@@ -95,6 +119,53 @@ namespace UOResources {
 			return getDrawItem(x, y, z, 0, 0, 0);
 		}
 
+		/// <summary>
+		/// Create a 3D quad for water statics in terrain mesh local space.
+		/// Uses the same vertex formula as buildTerrainMesh so it shares the depth buffer.
+		/// Must be parented to the terrain object (not statics).
+		/// </summary>
+		public GameObject getWaterQuad(int x, int y, int z, int worldX, int worldY) {
+			const float Z_SCALE = 6f / UOEC_SIZE;
+			float gz = z * Z_SCALE;
+			int px = x + worldX;
+			int py = y + worldY;
+
+			// Match terrain vertex formula: Vector3(px - gz, -py + gz, 100 - gz)
+			// Use same x/y shift from elevation so quad aligns with terrain mesh.
+			// Nudge z slightly closer to camera so water renders in front of terrain.
+			float zNudge = 0.05f;
+			Vector3 v00 = new Vector3(px - gz,     -(py) + gz,     100 - gz - zNudge);
+			Vector3 v10 = new Vector3((px+1) - gz, -(py) + gz,     100 - gz - zNudge);
+			Vector3 v01 = new Vector3(px - gz,     -(py+1) + gz,   100 - gz - zNudge);
+			Vector3 v11 = new Vector3((px+1) - gz, -(py+1) + gz,   100 - gz - zNudge);
+
+			Mesh quad = new Mesh();
+			quad.vertices = new Vector3[] { v00, v10, v01, v11 };
+			quad.uv = new Vector2[] {
+				new Vector2(0, 1), new Vector2(1, 1),
+				new Vector2(0, 0), new Vector2(1, 0)
+			};
+			quad.triangles = new int[] { 0, 1, 2, 1, 3, 2 };
+			quad.normals = new Vector3[] { Vector3.back, Vector3.back, Vector3.back, Vector3.back };
+			quad.RecalculateBounds();
+
+			GameObject go = new GameObject("water_" + tileart.id);
+			MeshFilter mf = go.AddComponent<MeshFilter>();
+			MeshRenderer mr = go.AddComponent<MeshRenderer>();
+			mf.mesh = quad;
+
+			Material wmat = getWaterMaterial();
+			if (wmat != null) {
+				if (resource != null && wmat.GetTexture("_MainTex") == Texture2D.whiteTexture)
+					wmat.SetTexture("_MainTex", resource.getTexture());
+				mr.sharedMaterial = wmat;
+			}
+
+			// No transform needed — vertices are already in terrain local space.
+			// This object will be parented to the terrain GameObject.
+			return go;
+		}
+
 		public virtual GameObject getDrawItem(int x, int y, int z, int worldX, int worldY, int drawLayer) {
 			Sprite sprite = getOrCreateSprite();
 			if (sprite == null) {
@@ -106,7 +177,6 @@ namespace UOResources {
 				float dry = ((-dy * 0.5f - dx * 0.5f) - 0.5f + dz) / 1.6525f;
 				dbg.transform.Translate(drx, dry, 0);
 				SpriteRenderer dbgR = dbg.AddComponent<SpriteRenderer>();
-				// Create a small colored square sprite
 				Texture2D dbgTex = new Texture2D(2, 2);
 				dbgTex.SetPixels(new Color[] { Color.magenta, Color.magenta, Color.magenta, Color.magenta });
 				dbgTex.Apply();
@@ -128,11 +198,7 @@ namespace UOResources {
 			realx /= 1.6525f;
 			realy /= 1.6525f;
 
-			// Water sprites sit just behind the terrain zero-elevation plane.
-			// Terrain world z ≈ 100 / (sqrt(2)*1.6525) ≈ 42.8 for flat tiles.
-			// Elevated terrain has lower world z (closer to camera) → occludes water via depth test.
-			float posz = _isWet ? 43.5f : 0f;
-			toret.transform.Translate(realx, realy, posz);
+			toret.transform.Translate(realx, realy, 0);
 
 			if (_flipped) {
 				toret.transform.Rotate(0, 0, -45.0f);
@@ -141,16 +207,7 @@ namespace UOResources {
 
 			SpriteRenderer r = toret.AddComponent<SpriteRenderer>();
 			r.sprite = sprite;
-
-			if (_isWet) {
-				// Water statics: render before terrain (Geometry-10 queue), terrain overwrites on top
-				r.sortingOrder = x + y + z;
-				Material wmat = getWaterMaterial();
-				if (wmat != null)
-					r.material = wmat;
-			} else {
-				r.sortingOrder = x + y + z + drawLayer;
-			}
+			r.sortingOrder = x + y + z + drawLayer;
 
 			return toret;
 		}

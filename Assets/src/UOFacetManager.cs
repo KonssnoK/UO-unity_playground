@@ -777,8 +777,16 @@ namespace UOResources {
 										UOConsole.Fatal("UPDATE: Removing {0} cause it's null", st.graphic);
 									}
 
-									goArray[x, y][i] = si.getDrawItem(x, y, st.z, worldX, worldY);
-									goArray[x, y][i].transform.parent = statics[fs.sectorID].transform;
+									if (si.isWet) {
+										// Water statics: 3D quad in terrain local space for proper depth
+										goArray[x, y][i] = si.getWaterQuad(x, y, st.z, worldX, worldY);
+										// worldPositionStays=false: keep local transform identity so
+										// parent's rotation+scale apply to mesh vertices correctly
+										goArray[x, y][i].transform.SetParent(terrains[fs.sectorID].transform, false);
+									} else {
+										goArray[x, y][i] = si.getDrawItem(x, y, st.z, worldX, worldY);
+										goArray[x, y][i].transform.parent = statics[fs.sectorID].transform;
+									}
 								}
 								//Else we already have the tile loaded!
 							} else {
