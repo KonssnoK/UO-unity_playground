@@ -1,0 +1,58 @@
+//#target vs_2_0
+//#param USE_VERTEX_COLORS 0 1
+//#param USE_TEXTURE 0 1
+
+struct VS_INPUT
+{
+	#if (USE_VERTEX_COLORS == 1)
+	    float4 color : COLOR;
+	#endif
+	float4 position: POSITION;
+	#if (USE_TEXTURE == 1)
+	float2 texCoord0: TEXCOORD0;
+    #endif
+};
+
+
+struct VS_OUTPUT
+{
+	float4 color     : COLOR0;
+	float4 position	: POSITION;
+	#if (USE_TEXTURE == 1)
+	float2 texCoord0 : TEXCOORD0;
+    #endif
+};
+
+
+
+VS_OUTPUT main(		
+	const VS_INPUT IN, 
+	uniform float4 screenParams : register(c0)
+	#if (USE_VERTEX_COLORS == 0)
+	,uniform float4 color : register(c1)
+	#endif
+	)
+	
+	
+{
+	VS_OUTPUT OUT;
+	
+	OUT.position.x = (IN.position.x * screenParams.x + screenParams.z) - 1;
+	OUT.position.y = 1 - (IN.position.y * screenParams.y + screenParams.w);
+	OUT.position.z = 0;
+	OUT.position.w = 1;
+	
+	#if (USE_TEXTURE == 1)
+	OUT.texCoord0 = IN.texCoord0;
+    #endif
+
+	#if (USE_VERTEX_COLORS == 1)
+	    OUT.color = IN.color;
+	#else
+	    OUT.color = color;
+	#endif
+	
+	
+	return OUT;
+}
+

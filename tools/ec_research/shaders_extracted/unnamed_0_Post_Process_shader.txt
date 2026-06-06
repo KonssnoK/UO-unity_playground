@@ -1,0 +1,233 @@
+////Post Process shader
+//#target ps_2_0
+#define TECHNIQUE_DOWNSCALE4X4 0
+#define TECHNIQUE_GAUSSBLUR5X5 1
+#define TECHNIQUE_DOWNSCALE2X2 2
+#define TECHNIQUE_BLOOM 3
+#define TECHNIQUE_BLOOMFINAL 4
+#define TECHNIQUE_MONOCHROME 5
+#define TECHNIQUE_TONEMAP 6
+#define TECHNIQUE_BRIGHTPASS 7
+
+#define TECHNIQUE_TEST 8
+//#param TECHNIQUE_INDEX 0 8
+
+#define MAX_SAMPLES 16
+//#linear BasePointClampSampler
+//#linear Shader0LinearClampSampler
+
+
+ // Fixed scaling value
+half LumaScale = 0.1f;
+half Luminance = 2.0f;
+half BloomScale = 2.0f;
+
+////-----------------------------------------------------------------------------
+//// Pixel Shader: DownScale4x4
+//// Desc: Scale the source texture down to 1/16 scale
+////-----------------------------------------------------------------------------
+half4 DownScale4x4(in half2 kScreenPosition : TEXCOORD0,uniform sampler2D BasePointClampSampler,half2 gakSampleOffsets[MAX_SAMPLES]
+) : COLOR
+{
+    half4 kSample = 0.0f;
+
+	for (int i = 0; i < 16; i++)
+	{
+		kSample += tex2D(BasePointClampSampler, kScreenPosition + gakSampleOffsets[i]);
+	}
+
+    kSample /= 16;
+
+	return half4(kSample.r * LumaScale, kSample.g * LumaScale,kSample.b * LumaScale, 1.0f);
+}
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: GaussBlur5x5
+// Desc: Simulate a 5x5 kernel gaussian blur by sampling the 13 points closest
+//       to the center point.
+//-----------------------------------------------------------------------------
+half4 GaussBlur5x5(in half2 kScreenPosition : TEXCOORD0
+	,uniform sampler2D BasePointClampSampler,half2 gakSampleOffsets[MAX_SAMPLES],half4 gakSampleWeights[MAX_SAMPLES]
+) : COLOR
+{
+    half4 kSample = 0.0f;
+
+	for (int i = 0; i <= 12; i++)
+	{
+		kSample += gakSampleWeights[i] * tex2D(BasePointClampSampler,kScreenPosition + gakSampleOffsets[i] );
+	}
+
+	return kSample;
+}
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: DownScale2x2
+// Desc: Scale the source texture down to 1/4 scale
+//-----------------------------------------------------------------------------
+half4 DownScale2x2(in half2 kScreenPosition : TEXCOORD0,uniform sampler2D BasePointClampSampler,half2 gakSampleOffsets[MAX_SAMPLES]
+	) : COLOR
+{
+    half4 kSample = 0.0f;
+
+	for (int i = 0; i < 4; i++)
+	{
+		kSample += tex2D(BasePointClampSampler,kScreenPosition + gakSampleOffsets[i] );
+	}
+    
+	return kSample / 4;
+}
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: Bloom
+// Desc: Blur the source image along one axis using a gaussian
+//       distribution. Since gaussian blurs are separable, this shader is 
+//       called twice; first along the horizontal axis, then along the 
+//       vertical axis.
+//-----------------------------------------------------------------------------
+half4 Bloom(in half2 kScreenPosition : TEXCOORD0,uniform sampler2D BasePointClampSampler,half2 gakSampleOffsets[MAX_SAMPLES],half4 gakSampleWeights[MAX_SAMPLES]
+	) : COLOR
+{
+    half4 kSample = 0.0f;
+    half4 kColor = 0.0f;
+        
+    half2 kSamplePosition;
+    
+    // Perform a one-directional gaussian blur
+    for (int iSample = 0; iSample < 15; iSample++)
+    {
+        kSamplePosition = kScreenPosition + gakSampleOffsets[iSample];
+        kColor = tex2D(BasePointClampSampler, kSamplePosition);
+        kSample += gakSampleWeights[iSample] * kColor;
+    }
+    
+    return kSample;
+}
+
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: FinalBloomPass
+// Desc: Tone map the scene and add post-processed light effects
+//-----------------------------------------------------------------------------
+
+half4 FinalBloomPass(in half2 kScreenPosition : TEXCOORD0, half BloomScale,uniform sampler2D BasePointClampSampler,uniform sampler2D Shader0LinearClampSampler)
+ : COLOR
+{
+ //   half4 kSample = tex2D(BasePointClampSampler, kScreenPosition);
+  //  half4 kBloom = tex2D(Shader0LinearClampSampler, kScreenPosition);
+
+    // Add the bloom post processing effect
+ //   kSample += BloomScale * kBloom;
+    
+//    return kSample;
+    
+    half4 kSample = tex2D(Shader0LinearClampSampler, kScreenPosition) * BloomScale;
+    return kSample;
+}
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: Monochrome
+// Desc: Performs post-processing effect that converts a colored image to
+//       black and white.
+//-----------------------------------------------------------------------------
+static const half3 LuminanceConv = { 0.2125f, 0.7154f, 0.0721f };
+
+half4 Monochrome(in half4 color ) : COLOR0
+{
+	return dot( (half3)color, LuminanceConv );
+}
+
+static const half fMiddleGray = 0.18f;
+static const half fWhiteCutoff = 0.8f;
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: ToneMapFilter
+// Desc: Perform a tone map filter on the source texture
+//-----------------------------------------------------------------------------
+half4 ToneMapFilter(in half4 color) : COLOR0
+{
+    half4 Color;
+
+    Color = color * fMiddleGray / ( Luminance + 0.001f );
+    Color *= ( 1.0f + ( Color / ( fWhiteCutoff * fWhiteCutoff ) ) );
+    Color /= ( 1.0f + Color );
+
+    return Color;
+}
+
+//-----------------------------------------------------------------------------
+// Pixel Shader: BrightPassFilter
+// Desc: Perform a high-pass filter on the source texture
+//-----------------------------------------------------------------------------
+half4 BrightPassFilter(in half4 color) : COLOR0
+{
+    half3 ColorOut = color;
+
+    ColorOut *= fMiddleGray / ( Luminance + 0.001f );
+    ColorOut *= ( 1.0f + ( ColorOut / ( fWhiteCutoff * fWhiteCutoff ) ) );
+    ColorOut -= 5.0f;
+
+    ColorOut = max( ColorOut, 0.0f );
+
+    ColorOut /= ( 10.0f + ColorOut );
+
+    return half4( ColorOut, 1.0f );
+}
+
+struct PS_INPUT
+{
+	half4 texCoord0 : TEXCOORD0;
+};
+
+
+half4 main(
+	uniform sampler2D BasePointClampSampler
+	,uniform sampler2D Shader0LinearClampSampler
+	,uniform half2 gakSampleOffsets[MAX_SAMPLES]
+	,uniform half4 gakSampleWeights[MAX_SAMPLES]
+	,PS_INPUT IN ) : COLOR0
+{
+
+	half4 color;
+	// All techniques independantly of each other for now
+	#if TECHNIQUE_INDEX == TECHNIQUE_DOWNSCALE4X4
+		color = DownScale4x4(IN.texCoord0,BasePointClampSampler,gakSampleOffsets);
+	#endif
+	
+	#if TECHNIQUE_INDEX == TECHNIQUE_GAUSSBLUR5X5
+		color = GaussBlur5x5(IN.texCoord0,BasePointClampSampler,gakSampleOffsets,gakSampleWeights);
+	#endif
+	
+	#if TECHNIQUE_INDEX == TECHNIQUE_DOWNSCALE2X2
+		color = DownScale2x2(IN.texCoord0,BasePointClampSampler,gakSampleOffsets);
+	#endif
+
+	#if TECHNIQUE_INDEX == TECHNIQUE_BLOOM
+		color = Bloom(IN.texCoord0,BasePointClampSampler,gakSampleOffsets,gakSampleWeights);
+	#endif
+
+	#if TECHNIQUE_INDEX == TECHNIQUE_BLOOMFINAL
+		color = FinalBloomPass(IN.texCoord0,BloomScale,BasePointClampSampler,Shader0LinearClampSampler);
+	#endif
+
+	#if TECHNIQUE_INDEX == TECHNIQUE_MONOCHROME
+		color = Monochrome(tex2D(BasePointClampSampler, IN.texCoord0));
+	#endif
+
+	#if TECHNIQUE_INDEX == TECHNIQUE_TONEMAP
+		color = ToneMapFilter(tex2D(BasePointClampSampler, IN.texCoord0));
+	#endif
+
+	#if TECHNIQUE_INDEX == TECHNIQUE_BRIGHTPASS
+		color = BrightPassFilter(tex2D(BasePointClampSampler, IN.texCoord0));
+	#endif
+
+	//Just put out base texture
+	#if TECHNIQUE_INDEX == TECHNIQUE_TEST
+	    color = tex2D(BasePointClampSampler, IN.texCoord0);
+	#endif
+
+	return color;
+
+	
+}
+

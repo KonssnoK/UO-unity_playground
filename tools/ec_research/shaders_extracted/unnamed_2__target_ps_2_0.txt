@@ -1,0 +1,38 @@
+//#target ps_2_0
+//#param USE_TEXTURE
+
+//#skip_invalid
+
+
+struct PS_INPUT
+{
+	float4 color     : COLOR0;
+#if (USE_TEXTURE == 1)
+	float2 texCoord0 : TEXCOORD0;
+#endif
+};
+
+
+struct PS_OUTPUT
+{
+	float4 color : COLOR0;
+};
+
+PS_OUTPUT main
+(
+	PS_INPUT IN
+#if (USE_TEXTURE == 1)
+	, uniform sampler2D BaseMapSampler
+#endif
+)
+{
+	PS_OUTPUT OUT;
+#if (USE_TEXTURE == 1)
+	float4 texColor = tex2D(BaseMapSampler, IN.texCoord0);
+	float4 finalcolor = texColor * IN.color;
+	OUT.color = finalcolor;
+#else
+	OUT.color = IN.color;
+#endif
+	return OUT;
+}

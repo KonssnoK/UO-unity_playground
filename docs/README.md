@@ -8,6 +8,10 @@ Each `<UopName>.md` here synthesises three sources of truth:
 
 The complete name-resolution pipeline (a hand-built C# struct map for the C# port) is in ``ec/patterns.py`` and its JSON twin at ``../out/uop_patterns.json``.
 
+**Beyond the file formats:**
+- [Rendering.md](Rendering.md) — how the EC renders (hue/mask/lighting/bloom), straight from the shaders in `Shaders.uop`.
+- [RuntimeTracing.md](RuntimeTracing.md) — dynamic analysis of `UOSA.exe` via Frida (no ASLR; spawn-and-trace).
+
 ## Quick coverage table
 
 | UOP                              | Entries | Naming pattern                                              | Note                                  |

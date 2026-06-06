@@ -1,0 +1,28 @@
+//#target vs_1_1
+
+
+struct VS_INPUT
+{
+	float4 position: POSITION;
+	float2 texCoord0: TEXCOORD0;
+};
+
+
+struct VS_OUTPUT
+{
+	float4 screenPosition: POSITION;
+    float2 texCoord0     : TEXCOORD0;
+};
+
+
+
+VS_OUTPUT main(uniform float4x3 worldTransform,	uniform float4x4 viewProjMatrix,const VS_INPUT IN )
+{
+	VS_OUTPUT OUT;
+	
+	float3 worldPosition = mul( IN.position, worldTransform );
+	OUT.screenPosition = mul( float4( worldPosition, 1 ), viewProjMatrix );
+    OUT.texCoord0 = IN.texCoord0;
+	return OUT;
+}
+

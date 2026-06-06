@@ -1,0 +1,36 @@
+//#target vs_1_1
+
+struct VS_INPUT
+{
+	float4 position	: POSITION;
+	float2 texCoord0: TEXCOORD0;
+	float2 texCoord1: TEXCOORD1;
+	float2 texCoord2: TEXCOORD2;
+	float4 color	: COLOR0;
+};
+
+struct VS_OUTPUT
+{
+	float4 screenPosition	: POSITION;
+    float2 texCoord0		: TEXCOORD0;
+    float2 texCoord1		: TEXCOORD1;
+    float2 texCoord2		: TEXCOORD2;
+	float4 color			: COLOR0;
+};
+
+VS_OUTPUT main(	uniform float4x3 worldTransform,	
+				uniform float4x4 viewProjMatrix,
+				uniform float3x3 effectTransform,
+				uniform float3x3 grungeTransform,
+				const VS_INPUT IN )
+{
+	VS_OUTPUT OUT;
+	
+	float3 worldPosition = mul( IN.position, worldTransform );
+	OUT.screenPosition = mul( float4( worldPosition, 1 ), viewProjMatrix );
+    OUT.texCoord0.xy = mul( float3(IN.texCoord0, 1 ), effectTransform );
+    OUT.texCoord1.xy = mul( float3(IN.texCoord1, 1 ), grungeTransform );
+    OUT.texCoord2 = IN.texCoord2;
+    OUT.color = IN.color;
+	return OUT;
+}
