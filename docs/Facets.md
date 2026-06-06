@@ -10,23 +10,36 @@ chunks. This is the EC equivalent of CC's `map*.mul` + `statics*.mul` +
 build/facetdefinition/{N:08}.bin
 ```
 
-7 entries = the 7 UO maps (facet 0–6). Each is a small variable-length header
-record. Observed leading fields per facet:
+7 entries = the 7 UO maps (facet 0–6). **Header DECODED ✅** — the cell
+dimensions match the known UO maps exactly:
 
-| facet | len | field@0x10 |
-|------:|----:|-----------:|
-| 0 (Felucca) | 2244 | 58 |
-| 1 (Trammel) | 1412 | 35 |
-| 2 (Ilshenar) | 900 | 20 |
-| 3 (Malas) | 148 | 4 |
-| 4 (Tokuno) | 148 | 4 |
-| 5 (TerMur) | 836 | 24 |
-| 6 | 52 | 1 |
+```
+u8   facetID
+u32  tilesetStringOffset   # offset into string_dictionary.uop (per-facet tile/texture list)
+u32  width                 # map width in cells
+u32  height                # map height in cells
+u8   sectorWidth           # 64
+u8   sectorHeight          # 64
+u8   _flag                 # 1
+u32  regionCount
+regionCount × region        # variable-size named-zone records (bounds + name); tail
+```
 
-The `field@0x10` count tracks map size (Felucca largest), so the record is a
-per-facet header followed by a variable list of region/sector descriptors. Exact
-field layout not yet decoded (low priority — the per-sector chunks below carry
-the actual tiles).
+| facet | map | width×height | sectors (w/64 × h/64) | regionCount |
+|------:|-----|-------------:|----------------------:|------------:|
+| 0 | Felucca | 7168×4096 | 112×64 = 7168 | 58 |
+| 1 | Trammel | 7168×4096 | 112×64 = 7168 | 35 |
+| 2 | Ilshenar | 2304×1600 | 36×25 = 900 | 20 |
+| 3 | Malas | 2560×2048 | 40×32 = 1280 | 4 |
+| 4 | Tokuno | 1448×1448 | 22×22 = 484 | 4 |
+| 5 | TerMur | 1280×4096 | 20×64 = 1280 | 24 |
+| 6 | (test) | 256×256 | 4×4 = 16 | 1 |
+
+The sector grid (`width/64 × height/64`) matches each `facet{N}.uop`'s entry
+count exactly (e.g. Felucca 7168 sectors → 7169 entries incl. 1 special). The
+`regionCount` tail holds the map's named zones/regions (Felucca 58, test map 1);
+each region record is variable-size (≈32 B+) — the only remaining sub-field not
+fully broken down (low priority — gameplay regions, not tiles).
 
 ## `facet{0..5}.uop` / `facet{0..5}x.uop` — per-sector map chunks
 
