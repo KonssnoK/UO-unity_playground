@@ -241,3 +241,98 @@ dominant blocker (often with `wall`).
    46 distinct t3 textures are created outside the captured frames; capture
    `CreateTexture`/`UpdateTexture` for them in the full trace to confirm
    dimensions (expected ~32² A8) and source.
+
+---
+
+# Appendix — open items resolved (P1 gating, P2, P3)
+
+## P1 (GATING) — layer → atlas + `layer_param` meaning
+
+### `layer_param` = TILING denominator (NOT a blend weight) — confirmed
+The per-stage texture-matrix scales captured in the trace are **exactly**
+`1/{4,5,6,8,9,10,16,24,32,48}` (e.g. `0.25=1/4`, `0.10=1/10`, `0.03125=1/32`,
+`0.0208=1/48`) — i.e. **the set of `layer_param` values**. So a layer's
+texcoord scale = `1 / layer_param`: the atlas **repeats once every `layer_param`
+world units** (cells). It is a **tiling/repeat scale**. (The most common tilings
+are `1/4` and `1/16`.) The blend weighting is *not* here — it comes from the
+mask textures (t1 alpha → `BLENDCURRENTALPHA`, t3 alpha → alpha-test; see M3).
+
+### `texMap` = atlas id — confirmed
+`TerrainTexture.uop` = **38 atlases, ids `[1..17, 20..40]`, each 256² DXT5**.
+A terrain's **base** texture is `build/terraintexture/{texMap:08}.dds`
+**directly** (grass id 3 → atlas 3; furrows id 10 → atlas 10). **No sub-rect** —
+the texture matrices are scale-only `diag(s, -s, 1)` (note V flipped) with
+`WRAP` addressing, so the whole 256² atlas tiles. (texMap = newId = the XML
+terrainType id; see M7 chain.)
+
+### The layer list = the terrain's TEXTURE STACK
+The trace shows **four disjoint texture sets** per chunk (0 overlap between
+them): stage0 = **11 base atlases** (t0), stage2 = **11 *different* detail/
+variation atlases** (t2), stage1 = **2 global detail masks** (t1, its alpha is
+the BLENDCURRENTALPHA weight), stage3 = **46 per-chunk coverage masks** (t3).
+So each terrain type draws as `lerp(baseAtlas, detailAtlas, detailMask.a)` then
+coverage-masked. The `TerrainDefinition` record's **N-entry layer list is that
+stack**, one entry per texture, each carrying its own `1/param` tiling and a
+`seq_index` (= stage order). The **recurring shared `layer_rec_id` (e.g.
+`0x1d2ab`, param 16)** across grass/grass2 is the **global detail mask** (t1,
+only 2 distinct in the whole frame).
+
+Worked examples (verified record bytes):
+- **grass** texMap 3 → atlas 3; rec_id `0x1d3c9`, `base_rid 0x1d2a8`, **N=3**
+  layers: `{0x1d3ca param5 seq0}`, `{0x1d3cb param5 seq1}`, `{0x1d2ab param16 seq2}`
+  = base(1/5) + detail(1/5) + shared-mask(1/16).
+- **grass2** texMap 4 → atlas 4; same `base_rid 0x1d2a8` (grass family),
+  N=3 params 4/4/16, shared `0x1d2ab` mask.
+- **furrows** texMap 10 → atlas 10; rec_id `0x38b5`, N=4, params 12/4/6/8.
+
+### Still not fully pinned — `layer_rec_id → atlas` for the non-base entries
+The base resolves cleanly (`record.rec_id@0 → record.index@4 = texMap → atlas`).
+The **other layer entries** reference textures by `layer_rec_id` in the internal
+119xxx id space (usually `rec_id+1, +2`, plus the shared mask id). These are
+**not** other TerrainDefinition records' rec_ids — they're sub-resource ids
+resolved through the Gamebryo resource cache (`FUN_004cc3f0 → FUN_00a7222c`,
+keyed by id; the layer object type is chosen by string in `FUN_00461790`:
+`UODefaultTerrainLayer` / `UOWaterTerrainLayer` / `UOBumpMapTerrainLayer`).
+The `base_rid` is shared across a terrain *family* (grass 3 & 4 both `0x1d2a8`),
+i.e. there's material inheritance. **To bind the detail atlas + mask concretely**,
+map the trace's t2/t1 texture pointers to their source DDS via the full-trace
+`CreateTexture` order (the base atlas binding — `atlas[texMap]` — is enough to
+start; the detail/mask are a refinement).
+
+## P2 — t3 coverage masks: runtime-generated per-chunk splat masks
+
+**Source (strong inference): generated at runtime from the per-cell terrain
+grid, one mask per (chunk, overlay-layer).** Evidence: t3 has **46 distinct
+textures** for just the few visible chunks (≈ chunks × overlay-layers), each
+sampled at the **chunk-normalized UV (0..1)** — i.e. one tile across the 32×32
+chunk. Per-chunk masks cannot be static authored assets (millions of chunks), so
+they are built from the cell terrain-type grid: for each terrain layer present
+in a chunk, a coverage mask whose alpha marks the cells of that terrain. Stage 3
+takes that alpha as the overlay's coverage (layer 0 uses DIFFUSE=opaque instead;
+overlays use `ALPHAARG1=TEXTURE`=t3.a, then alpha-test stamps it — see M3). Soft
+edges come from t1 (the BLENDCURRENTALPHA detail mask) + bilinear filtering.
+
+*Dimensions/format/generator function pending* a full-trace
+`CreateTexture`/`LockRect` capture of a t3 address (e.g. `0x20bca720`) — the
+mining over `UOSA.trace` (318 MB) was still streaming at write time. Expected
+~32² (or 33²) `A8`/`A8L8`, CPU-locked-and-filled (not D3DX-loaded), point or
+bilinear filtered (matters for edge feathering).
+
+## P3 — map Z → world Y — mechanism found, scale still open
+
+The render fn does **not** compute elevation: it assembles each vertex as
+`POS = precomputed_corner + chunk_origin`, i.e. `Y = pfVar17[-4] + param_1[3]`
+(`FUN_00461bc0` lines 176–178). The **map-Z→Y scale lives in the mesh
+*precompute*** that fills `pfVar17` (the per-cell corner array, stride `0x180`),
+**not** in the render function (whose only float literal is `0.03125` for
+texcoords). From the blob the corner-to-corner Y step is a uniform **`≈0.0353`
+per cell** (planar bilinear patch), the candidate per-Z-unit scale.
+
+A facet-Z correlation was attempted: blob world `(1312, -1472)` → facet0 sector
+`1303` (`= sx*64+sy`, matches the sector filename id), but those cells read
+**z = 0 (flat)** while the blob's POS.Y still varies `−0.20 ± 0.13` — so either
+the blob chunk is on a different facet/region, or POS.Y includes a projection/
+bias term beyond raw elevation. **Open:** read the precompute function's height
+term, or correlate the blob against the correct facet/region's per-cell z (the
+facet sector z-bytes are decoded — see Facets.md — so this is a tractable
+follow-up once the blob's facet is identified).
