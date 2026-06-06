@@ -10,7 +10,8 @@ The complete name-resolution pipeline (a hand-built C# struct map for the C# por
 
 **Beyond the file formats:**
 - [Rendering.md](Rendering.md) — how the EC renders (hue/mask/lighting/bloom), straight from the shaders in `Shaders.uop`.
-- [RuntimeTracing.md](RuntimeTracing.md) — dynamic analysis of `UOSA.exe` via Frida (no ASLR; spawn-and-trace).
+- [RuntimeTracing.md](RuntimeTracing.md)
+- [EC_Terrain_Renderer_Findings.md](EC_Terrain_Renderer_Findings.md) — the EC chunked-mesh terrain renderer: record layout, 4-stage splat recipe, vertex format, data join (from APItrace + Ghidra). — dynamic analysis of `UOSA.exe` via Frida (no ASLR; spawn-and-trace).
 
 ## Quick coverage table
 
