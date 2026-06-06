@@ -78,3 +78,6 @@ tools/ec_research/uoreader/AnimationFrameDump/
 tools/**/*.log
 tools/ec_research/uoreader/AnimationFrameDump
 tools/ec_research/out_table*.bin
+
+# extracted shader text (regenerate from Shaders.uop)
+tools/ec_research/shaders_extracted/
