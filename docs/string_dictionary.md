@@ -27,11 +27,15 @@ stringCount × {
 ```
 
 - Two access modes (UOReader `StringDictionary`):
-  - **by position** — the Nth string (`GetStringAtPosition`).
-  - **by byte offset** — the string whose record starts at byte `X` in the
-    decompressed buffer (`GetStringAtOffset`). This is what tileart/effects use:
-    the stored `u32` is a **byte offset** into this buffer, not an index.
-    (Verified: offset 119154 → `"1255.tga"`.)
+  - **by position / index** — the Nth string (`GetStringAtPosition`). **This is
+    what the consumers actually use:** the stored `u32` is a 0-based string
+    index. Verified — tileart name field `0x02` (40,402/40,402 in-range; index
+    6=`nodraw`, 9=`ankh`) and `EffectDefinitionCollection` texture refs
+    (268/269; e.g. index → `lightning.ems`).
+  - **by byte offset** — the string whose record starts at byte `X`
+    (`GetStringAtOffset`). Exists in the API but is **not** how tileart/effects
+    reference strings (interpreting their `u32` as a byte offset resolves only
+    ~3 %, by coincidence).
 
 ## Notes for the C# port
 

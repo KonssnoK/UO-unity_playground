@@ -22,7 +22,7 @@ are annotated.
 | Offset | Type     | Field                       | Verified | Empirical observation                                  |
 |-------:|----------|-----------------------------|:--------:|--------------------------------------------------------|
 | 0x00   | u16      | Version                     | ✅       | `0x0004` in current build (wiki said `0x0003`)         |
-| 0x02   | u32      | StringDictionary offset (name) | ✅    | Points into `string_dictionary.uop`; resolves to the tile's display name |
+| 0x02   | u32      | StringDictionary **index** (name) | ✅ | The **Nth** string in `string_dictionary.uop` (position via `GetStringAtPosition`, **NOT** a byte offset) — verified 40,402/40,402 in-range; resolves to the tile's display name (e.g. index 6=`nodraw`, 9=`ankh`). As a byte offset only 1,080 resolve (coincidence). |
 | 0x06   | u32      | TileID                      | ✅       | Matches the id we used in the hash lookup              |
 | 0x0A   | u8       | Unknown bool                | ✅       | 0 or 1 (≈59% zero / 41% one across statics)            |
 | 0x0B   | u8       | Padding                     | ✅       | Always 0 — alignment before f32 at 0x0C                |

@@ -21,7 +21,7 @@ build/effectdefinitioncollection/{N:08}.bin     (8-digit zero-padded)
 u32  layerCount
 layerCount × {                      # 32 bytes each
     u32  type            # 0 in the common case (layer/blend type)
-    u32  texStringOffset # offset into string_dictionary.uop -> effect texture name, e.g. "1255.tga"
+    u32  texStringIndex  # INDEX (Nth string) into string_dictionary.uop -> effect name, e.g. "lightning.ems" / "..._Fireworks01.nif"
     u32  _a              # 0
     u32  _b              # 0
     u32  _c              # 0
@@ -33,9 +33,11 @@ layerCount × {                      # 32 bytes each
 
 - Record sizes line up exactly: `layerCount=1 → 36 B` (4 + 32), `2 → 68 B`,
   `3 → 100 B`. Most records are single-layer (261 of 269).
-- **`texStringOffset`** resolves through `string_dictionary.uop` to a `.tga`
-  filename (verified: offset 119154 → `"1255.tga"`); the actual pixels live in
-  **`EffectTexture.uop`**.
+- **`texStringIndex`** is a **string-dictionary index** (the Nth string, via
+  `GetStringAtPosition` — *not* a byte offset). Verified 268/269 in-range; they
+  resolve to effect names like `lightning.ems`, `Placeholder01.ems`,
+  `00001001_Fireworks01.nif`. The actual pixels/meshes live in
+  **`EffectTexture.uop`** (NIF/EMS).
 - **`param`** is a float effect parameter clustering on `0.25–1.0`.
 - **`flags`** low bit is usually set; the high bits (`0x40000000`, `0x80000000`)
   look like blend/loop mode bits.
