@@ -26,8 +26,8 @@ are annotated.
 | 0x06   | u32      | TileID                      | ✅       | Matches the id we used in the hash lookup              |
 | 0x0A   | u8       | Unknown bool                | ✅       | 0 or 1 (≈59% zero / 41% one across statics)            |
 | 0x0B   | u8       | Padding                     | ✅       | Always 0 — alignment before f32 at 0x0C                |
-| 0x0C   | f32      | Float (mostly 1.0)          | ✅       | 1.0 in 37923/40208 tiles; few have 1.05/1.25/0.4 — per-tile scale? |
-| 0x10   | f32      | Float (mostly 1.5)          | ✅       | 1.5 in 39023 tiles; 1.0 in 1155; few outliers          |
+| 0x0C   | f32      | Per-tile float (≈1.0)       | ✅       | `1.0` in 38,099/39,203; rare `0.6–0.9`, `4.0` (228), `5.0` (381). **Not** light-related. A per-tile scale/multiplier; exact role unconfirmed |
+| 0x10   | f32      | **HD scale = 1.5**          | ✅       | Constant `1.5` (39,201/39,203) — the worldart HD→CC pixel-pitch factor (`HD_TO_CC`). Effectively fixed |
 | 0x14   | u32      | Fixed zero                  | ✅       |                                                        |
 | 0x18   | u32      | **OldId / pre-EC tile id**  | ✅       | `0x00FFFFFF` = "no remap" (21196 tiles); otherwise real CC tile id of the pre-renumber sprite |
 | 0x1C   | u32      | Unknown (statics: always 0) | ✅       | **0 for every paired static** (22,819); the "few hundred non-zero" are land/other tiles, not statics |
@@ -37,7 +37,7 @@ are annotated.
 | 0x29   | u32      | Always 0                    | ✅       |                                                        |
 | 0x2D   | f32      | **Lights[0]**               | ✅       | `Lights[0]` in C# parser ([TileArt.cs:179](../../src/ClassicUO.Assets/TileArt.cs#L179)). Range -5.0..2.0; non-zero in ~1000 tiles (light-source params) |
 | 0x31   | f32      | **Lights[1]**               | ✅       | `Lights[1]`. Range -11.5..0; non-zero in ~1200 tiles   |
-| 0x35   | u32      | Unknown                     | ✅       | 85 unique u32 values across statics — real per-tile data |
+| 0x35   | u32      | **Linked tile id**          | ✅       | Non-zero on 1,929 statics (mostly walls/posts). **100 % resolve to a valid CC tile id** (never the tile's own id) — a cross-reference to an alternate/linked tile (e.g. wall→hull variant). `0` = none |
 | 0x39   | u64      | **Flags (EC)**              | ✅       | **CC `TileFlag`, identical bit layout** — verified bit-for-bit against CC `tiledata.mul` (phi = 1.00 for ~20 bits; see [Flag mapping](#flag-mapping-ec-vs-cc)). The EC bit names come from the client's own flag table (`UOSA.exe FUN_00c11880`). |
 | 0x41   | u64      | **Flags (legacy)**          | ✅       | Bit-perfect mirror of `0x39`; the legacy-side copy. |
 | 0x49   | u32      | **Facing** (geometry class) | ✅       | Named `facing` in the C# parser ([TileArt.cs:184](../../src/ClassicUO.Assets/TileArt.cs#L184)). Statics: `1` (35,691 — normal/floor), `2` (432 — **walls**: 98% CC Wall, 92% Impassable), `3` (2,926 — impassable objects), `0` (150). Value 2 cleanly isolates vertical wall geometry. |
@@ -123,7 +123,7 @@ Wiki labels in parentheses match the original `Tileart.creole` for cross-referen
 | **SittingData** (SUB_9_5)     | `u8 count` + (if non-zero) 4 × u32                           | Mount/chair sit-anchor offsets                                                        |
 | **RadarColor** (SUB_9_6)      | 4 × u8                                                       | Minimap RGBA                                                                          |
 | **TextureRefs** (SUB_9_7)     | four `TEXTURE()` blocks — `WorldArt`, `TileArtLegacy`, `TileArtEnhanced`, `Textures` | The actual sprite pointers — see [TextureRefs section](#textureRefs-the-texture-block) |
-| **Effects** (SUB_9_8)         | `u8 effect_count` + variable per-effect                      | Visual effects (sparks, splash, animation overlays); *opcodes 0/1/2/7/10/11/12/15/16/17 each have their own body layout — not yet decoded*. Stored as `EffectsTail` in C#. |
+| **Effects** (SUB_9_8)         | `u8 effect_count` + `count ×` per-effect body (opcode-tagged) | Visual effects. **99.0 % of statics have `effect_count == 0`** (1-byte tail). When present: each effect starts with an opcode; **opcode 0 = a fixed 32-byte body** (`u32 opcode=0`, `u16 effect-id`, then param floats e.g. 0.1 / 2.0 / scale). count=1→33 B, count=2→65 B confirm the 32-B fixed body. Rarer opcodes (12, 88, 96, …) have their own variable sizes — full per-opcode layout still needs the EC effect-parser switch (ghidra), low priority since rare + visual-only. Stored opaque as `EffectsTail` in C#. |
 
 ### TAEPropID — the property ids <a name="taepropid-verified"></a>
 

@@ -21,14 +21,21 @@ Pattern: a header DWORD (`rec_id`), then small typed fields, then **references t
 
 Decompressed sizes for the first 10 records: 154, 170, 171, 155, 155, 138, 155, 138, 138, 138 bytes — small, fixed-shape records with optional extensions.
 
-## Naming
+## Naming — RESOLVED ✅
 
 ```
-build/terraindefinition/{id:08}.bin
+build/terraindefinition/{N}.bin       (N = non-zero-padded decimal)
 ```
 
-- **78.7% coverage** (196 of 249 entries via Dictionary.dic).
-- The 53 unknown-named entries probably use ids outside the simple 0..N range — possibly *also* with a +1,000,000 offset for shader/effect-related terrain definitions (same trick as `GumpArtMask`).
+- **100% coverage** (249/249). The file index `N` runs **0..2190 (sparse)** — it
+  is a terrain *file* index, **not** the record's internal `rec_id` (the first
+  DWORD, e.g. 118572).
+- The earlier "78.7% / 53 unknown" was because the prior pattern used **zero-
+  padded** `{id:08}.bin`; the names are plain decimal (`build/terraindefinition/0.bin`,
+  `.../1.bin`, … `.../2190.bin`). Source: the UOReader 0.8.7 `Dictionary.dic`
+  (which carries these names; the shipped EC dic does not).
+- The same non-padded convention applies to other terrain archives in that dic
+  (e.g. `build/terraintexture/{N}.bin`).
 
 ## Disassembly notes
 

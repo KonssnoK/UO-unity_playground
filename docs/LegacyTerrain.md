@@ -25,7 +25,13 @@ The class name `LegacyTerrainDefinition` appears at `s_LegacyTerrainDefinition_0
 
 ## Naming
 
-**Unknown.** The 4,108 entries are not in `Dictionary.dic` and don't match any `build/legacyterrain/...` brute-force pattern we tried. Plausible names (untested): something like `build/legacyterrain/<terrainType.id>.xml`, but neither lowercased numeric ids nor the explicit XML name strings hit.
+**Unrecoverable (and confirmed so).** Exhausted every avenue:
+1. Brute-force over id / sequential-index / name-based patterns × many roots/exts — **no hits**.
+2. The EC binary has **no `build/legacyterrain` format string** (only the registry name `LegacyTerrain.uop`).
+3. **EC `Dictionary.dic`** — 2,715/4,108 of the archive's hashes are present but stored with `has_name=0` (no name string); the other 1,393 aren't in the dic at all.
+4. **UOReader 0.8.7's `Dictionary.dic`** (larger: 190,581 entries / 141,216 named) — has **15 `build/` roots and none for legacy terrain**, and **0/4,108** of the archive's hashes resolve. UOReader 0.8.7 predates this archive.
+
+So the names were stripped from every shipped dictionary and can't be reconstructed without the build-time name list. This is moot for use — records self-identify via their XML `id`.
 
 **The naming barely matters for use.** The XML records contain their own id, so:
 

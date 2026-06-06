@@ -40,10 +40,21 @@ So each row is a dark→light gradient *in that hue*. The shader therefore does
 `out.rgb = HueSampler(pixel.intensity, hue).rgb` for masked pixels (an intensity
 remap into the hue ramp), gated by `HueMaskSampler`.
 
-> NOTE: the texture is 1024 rows but UO has ~3000 hue ids. Whether row == hue id
-> directly (covering 0..1023) with higher ids handled elsewhere, or the hue id
-> is remapped/scaled into 0..1023, is **not yet confirmed** — needs a check
-> against a known hue (e.g. skin 1002 / a dye) vs the row that produces it.
+> **RESOLVED ✅ — `row index == UO hue id`, directly, no scaling.** Verified
+> against CC `hues.mul`: the darkest column of row `N` (`ec(N, x=0)`) equals CC
+> hue `N`'s first ramp colour exactly for every tested hue (2, 33, 100, 500,
+> 1002=skin, 1023). The whole row reproduces that hue's CC ramp, just finely
+> interpolated across the columns (e.g. row 1002 cols 0→~150 walk the skin ramp
+> `(0,0,8)→(208,160,144)`; the active band is the first ~512 cols, rest
+> transparent).
+>
+> Because the texture is only **1024 rows**, it covers **hues 0–1023 only**.
+> UO has ~3000 hues, so hues **1024–2999 are not in this ramp** — they fall back
+> to the per-hue swatch colour (entries 2+) rather than a true gradient. Most
+> sprite-relevant hues (skin 1002–1058, hair, common dyes) are < 1024.
+>
+> Pixel format note: entry1 is a **DDS** (128-byte header + 1024×1024 **BGRA**,
+> uncompressed) — swap B↔R when reading. `ec(y,x).rgb = bytes[off+2,+1,+0]`.
 
 ## entries 2..3002 — per-hue swatches
 
@@ -56,7 +67,11 @@ entry   3: BGRA (184,0,0)   → RGB (0,0,184)    blue
 entry   4: BGRA (232,0,0)   → RGB (0,0,232)    bright blue
 entry1004: BGRA (144,160,208)→ RGB (208,160,144) tan / skin
 ```
-(Index→hue-id mapping likewise TBD; entry2 is presumably hue 0 or 1.)
+**RESOLVED ✅ — swatch entry `E` = CC hue `(E-2)`'s representative colour**
+(the brightest ramp entry, index 31). Verified exact (distance 0) vs CC
+`hues.mul` for entries 2, 3, 4, 34, 1004, 1153. So **entry `2+N` ↔ hue id `N`**
+(0-indexed into `hues.mul`); entry 2 = hue 0. This matches the ramp-row finding
+(row `N` = hue `N`) — the swatch is just that hue's single preview colour.
 
 ## How it applies to animations & statics
 

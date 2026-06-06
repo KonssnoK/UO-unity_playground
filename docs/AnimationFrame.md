@@ -1,20 +1,26 @@
 # AnimationFrame{1..6}.uop
 
-**Internal registry slots:** Not directly registered through the `FUN_00a70e5a` table — these archives are loaded on demand by the animation manager (the disassembly references `AVUOAnimationFrameSet` and `AVUOAnimationFrameSetFactory` types).
+**Internal registry slot:** `UOAnimationFrameSetFactory` (registered at registry
+slots `0x10` / `0x12`, see `FUN_004af1a0`). Loaded on demand by the animation
+manager.
+
+> ✅ **The payload format is fully decoded.** See
+> **[AnimationFrame_AMOU.md](AnimationFrame_AMOU.md)** for the verified spec and a
+> working reference decoder. This page is kept only for the archive-level facts;
+> the format details that were here before were **wrong** (see the correction at
+> the bottom).
 
 ## What it contains
 
-The per-frame **AMOU**-format animation atlases. One UOP per loader bucket (the EC partitions animations into six buckets the same way the CC partitions `anim.mul` / `anim2.mul` / etc.).
+The per-frame **AMOU**-format animation frames. Six UOP buckets sharing one
+virtual-folder root; the partition by file is just load-balancing.
 
-| File                       | Entries  |
-|----------------------------|---------:|
-| `AnimationFrame1.uop`      |  6,124   |
-| `AnimationFrame2.uop`      | 14,382   |
-| `AnimationFrame3.uop`      |  8,900   |
-| `AnimationFrame4.uop`      |  2,575   |
-| `AnimationFrame5.uop`      |    455   |
-| `AnimationFrame6.uop`      |  1,693   |
-| **Total**                  | **34,129** |
+- **34,836 entries** total across the six archives, all resolving under the
+  name pattern below.
+- Body-id coverage **0–1681** (790 distinct bodies at action 0; action ids span
+  0–78). These are the real in-game mobiles — human (400/401), horse (204/226),
+  dragon (59), etc. The high-id bodies in `AnimationDefinition.uop` are a
+  separate, frame-less id space (see [AnimationDefinition.md](AnimationDefinition.md)).
 
 ## Naming
 
@@ -22,43 +28,30 @@ The per-frame **AMOU**-format animation atlases. One UOP per loader bucket (the 
 build/animationframe/{body:06}/{action:02}.bin
 ```
 
-- **100% coverage** across all six archives — every entry resolves.
-- `body` is the UO body id (e.g. 109 = horse, 400 = human male, 943 = mongbat, etc.).
-- `action` is the action id (0..40-ish per body, varies).
-- All six buckets share the SAME folder root (`animationframe`); the partition by *file* is just a load-balancing artefact. Look-up logic for the C# port: hash the name once, query each AnimationFrame{1..6} in turn until you find a hit.
+- `body` = UO body id; `action` = action id. Hash the name once, query each
+  `AnimationFrame{1..6}` in turn until a hit.
 
-## Payload format — the AMOU header
+## Payload format (summary — full spec in AnimationFrame_AMOU.md)
 
-The first 32 bytes of every entry follow this layout (confirmed by sampling `AnimationFrame1.uop[0]`):
+- **40-byte header** (`0x00..0x27`): magic `AMOU`, version, total_size, body_id,
+  global bbox (4×i16), `colour_count` (`0x18`), `colour_offset` (`0x1C`, always
+  `0x28`), `frame_count` (`0x20`), `frame_offset` (`0x24`).
+- **Palette** at `0x28`: `colour_count` × `(R,G,B,flag)`. The `flag` is the EC
+  hue-mask (0 = skin/greyscale-tinted, ≠0 = baked cloth).
+- **Frame table** at `frame_offset`: `frame_count` × 16 B.
+- **Pixels**: anti-aliased **RLE** (not DXT), one slice per frame.
+- **5 directions** are packed per action file (`frame_count = 5 × framesPerDir`),
+  mirrored to 8 at draw time.
 
-```
-offset  size  field          example values
-0       4     magic          'AMOU'
-4       4     version u32    1
-8       4     dsize u32      = entry.decompressed_size (sanity field)
-12      4     count u32      varies (frame count or something proportional)
-16      2     bbox_min_x i16 e.g. -31
-18      2     bbox_min_y i16 e.g. -99
-20      2     bbox_max_x i16 e.g. +31
-22      2     bbox_max_y i16 e.g. -21
-24      2     atlas_w u16    always 256 in our sample
-26      2     padding/flags  always 0
-28      4     atlas_h u32    always 40 in our sample (per-strip height)
-32...         frame pixel data follows
-```
+## ❌→✅ Correction (what this page used to claim)
 
-- Atlas dimensions 256×40 imply a horizontal strip of frames per row; larger animations stack rows.
-- Pixel encoding past the 32-byte header is **not yet decoded** — likely DXT-compressed atlas plus a directions/timings table. Needs another RE pass.
+The earlier version of this doc described a "32-byte header with a 256×40
+**DXT-compressed atlas**, pixel encoding not yet decoded." **All wrong:**
 
-## Disassembly notes
+- The header is **40 bytes**, not 32.
+- The "`atlas_w = 256`" was the palette **`colour_count` (256)** at `0x18`; the
+  "`atlas_h = 40`" was **`colour_offset` (0x28 = 40)** at `0x1C`. There is no
+  256×40 atlas.
+- The pixels are **anti-aliased RLE**, not DXT.
 
-- The Ghidra dump shows `AVUOAnimationFrameSet`, `AVUOAnimationFrameSetFactory`, `AnimationLegacyFrameSet` types referenced — these are the in-memory classes built from the AMOU payloads.
-- The "Legacy" variant (`AnimationLegacyFrameSet`) suggests EC keeps both legacy `.mul`-derived animations AND new `AMOU` ones in the same engine; for ClassicUO we only need the AMOU path.
-
-## Notes for the C# port
-
-- 2-level hash lookup is cheap: pre-compute hashes for `(body, action)` pairs as needed.
-- AMOU pixel-decode is the next big blocker. Two options:
-  1. **Decode AMOU** properly. Requires identifying the codec (could be DXT block-runs interspersed with metadata for direction / hue layers).
-  2. **Defer animations** in the C# port: render statics + terrain first, fall back to CC anims, treat AMOU as a future task.
-- Recommended for first cut: option 2.
+The decode was reverse-engineered from UOReader 0.8.7 and verified in-client.
