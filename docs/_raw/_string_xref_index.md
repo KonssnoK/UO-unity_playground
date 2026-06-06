@@ -1,0 +1,72 @@
+# String -> functions xref index
+
+- `PTR_s_AtlasTerrainShader_00de90b0` -> 1 fns: `009d4ad0`
+- `PTR_s_GameTerrainShader_00de90b8` -> 1 fns: `009d5ca0`
+- `PTR_s_GameTerrainTexturingProperty_00de90c0` -> 1 fns: `009d7190`
+- `PTR_s_MobAnimTexture_00dc52f8` -> 1 fns: `00431220`
+- `PTR_s_MobAnimTriShapeShadow_00dc5300` -> 1 fns: `00431130`
+- `PTR_s_MobAnimTriShape_00dc52f0` -> 1 fns: `00431050`
+- `PTR_s_MythicAmbientLight_00de90f0` -> 122 fns: `009b9ba0`, `009ef390`, `009ef770`, `009efd00`, `009f0460`, `009f0d90`, `009f1530`, `009f1ea0`, `009f29e0`, `009f3570`, `009f42c0`, `009f5220`, `009f59c0`, `009f6330`, `009f6e70`, `009f7a00`, `009f8750`, `009f96b0`, `009fa240`, `009faf90`, `009fbef0`, `009fce50`, `009fd4f0`, `009fdd50`, `009fe780`, `009ff200`, `009ffe40`, `00a00c90`, `00a01710`, `00a02350`, `00a031a0`, `00a18370`, `00a186e0`, `00a18c00`, `00a192f0`, `00a19bb0`, `00a1a2e0`, `00a1abf0`, `00a1b6c0`, `00a1c1e0`, `00a1ceb0`, `00a1dd90`, `00a1e4c0`, `00a1edd0`, `00a1f8a0`, `00a203c0`, `00a21090`, `00a21f70`, `00a22a90`, `00a23760`, `00a24640`, `00a25520`, `00a25b40`, `00a26320`, `00a26ce0`, `00a276f0`, `00a282c0`, `00a29090`, `00a29aa0`, `00a2a670`, `00a2b440`, `00a2c210`, `00a2c6e0`, `00a2cd70`, `00a2d5d0`, `00a2e010`, `00a2e8a0`, `00a2f320`, `00a2ff50`, `00a30bd0`, `00a31a10`, `00a32a70`, `00a33300`, `00a33d80`, `00a349b0`, `00a35630`, `00a36470`, `00a374d0`, `00a38150`, `00a38f90`, `00a39ff0`, `00a3b050`, `00a3b7d0`, `00a3c140`, `00a3cc70`, `00a3d7f0`, `00a3e530`, `00a3f480`, `00a40000`, `00a40d40`, `00a41c90`, `00a42be0`, `00a43060`, `00a436a0`, `00a43eb0`, `00a44880`, `00a450d0`, `00a45b00`, `00a466e0`, `00a47320`, `00a48110`, `00a49120`, `00a49970`, `00a4a3a0`, `00a4af80`, `00a4bbc0`, `00a4c9b0`, `00a4d9c0`, `00a4e600`, `00a4f3f0`, `00a50400`, `00a51410`, `00a51b30`, `00a52450`, `00a52f30`, `00a53a50`, `00a54740`, `00a55640`, `00a56160`, `00a56e50`, `00a57d50`, `00a62010`
+- `PTR_s_MythicBaseShader_00de90d0` -> 1 fns: `009dc580`
+- `PTR_s_MythicDirectionalLight_00de90d8` -> 2 fns: `009b9ba0`, `009dc6d0`
+- `PTR_s_MythicPointLight_00de90e8` -> 140 fns: `009b9ba0`, `009de610`, `009dec40`, `009df450`, `009dfe30`, `009e0850`, `009e1440`, `009e2230`, `009e2860`, `009e3070`, `009e3a50`, `009e4470`, `009e5060`, `009e5e50`, `009e6870`, `009e7460`, `009e8250`, `009ea4f0`, `009eae10`, `009eb8f0`, `009ec5d0`, `009ecef0`, `009ed9d0`, `009ee6b0`, `009f0d90`, `009f1530`, `009f1ea0`, `009f29e0`, `009f3570`, `009f42c0`, `009f5220`, `009f59c0`, `009f6330`, `009f6e70`, `009f7a00`, `009f8750`, `009f96b0`, `009fa240`, `009faf90`, `009fbef0`, `009fe780`, `009ff200`, `009ffe40`, `00a00c90`, `00a01710`, `00a02350`, `00a031a0`, `00a058c0`, `00a06020`, `00a06950`, `00a07440`, `00a07f90`, `00a08c90`, `00a09bb0`, `00a0a310`, `00a0ac40`, `00a0b730`, `00a0c280`, `00a0cf80`, `00a0dea0`, `00a0e9f0`, `00a0f6f0`, `00a10610`, `00a12d60`, `00a13790`, `00a14380`, `00a15170`, `00a15ba0`, `00a16790`, `00a17580`, `00a19bb0`, `00a1a2e0`, `00a1abf0`, `00a1b6c0`, `00a1c1e0`, `00a1ceb0`, `00a1dd90`, `00a1e4c0`, `00a1edd0`, `00a1f8a0`, `00a203c0`, `00a21090`, `00a21f70`, `00a22a90`, `00a23760`, `00a24640`, `00a26ce0`, `00a276f0`, `00a282c0`, `00a29090`, `00a29aa0`, `00a2a670`, `00a2b440`, `00a2e010`, `00a2e8a0`, `00a2f320`, `00a2ff50`, `00a30bd0`, `00a31a10`, `00a32a70`, `00a33300`, `00a33d80`, `00a349b0`, `00a35630`, `00a36470`, `00a374d0`, `00a38150`, `00a38f90`, `00a39ff0`, `00a3cc70`, `00a3d7f0`, `00a3e530`, `00a3f480`, `00a40000`, `00a40d40`, `00a41c90`, `00a44880`, `00a450d0`, `00a45b00`, `00a466e0`, `00a47320`, `00a48110`, `00a49120`, `00a49970`, `00a4a3a0`, `00a4af80`, `00a4bbc0`, `00a4c9b0`, `00a4d9c0`, `00a4e600`, `00a4f3f0`, `00a50400`, `00a52f30`, `00a53a50`, `00a54740`, `00a55640`, `00a56160`, `00a56e50`, `00a57d50`, `00a61af0`
+- `PTR_s_MythicShaderLibrary.nl9_00db8ea0` -> 1 fns: `0058de80`
+- `PTR_s_MythicShadowGenerator_00de90e0` -> 1 fns: `00a619b0`
+- `PTR_s_TerrainTriShape_00dc7b20` -> 1 fns: `004600d0`
+- `PTR_s_UOStaticTerrainShader_00dd5d50` -> 1 fns: `00596880`
+- `PTR_s_UOTerrainCollisionNode_00dc3268` -> 1 fns: `00415350`
+- `PTR_s_UOTerrainShader_00dd6098` -> 1 fns: `00597b90`
+- `PTR_s_UOTerrainTexturingProperty_00dd60a0` -> 3 fns: `004602f0`, `00597e90`, `00597ef0`
+- `s_%08d_LegacyTileArt_00cae7f4` -> 1 fns: `0051af20`
+- `s_%08d_TileArt_00cae79c` -> 1 fns: `0051a840`
+- `s_AnimationFrame_00ca1d9c` -> 1 fns: `00a71a4d`
+- `s_AtlasTerrain.psh_00d00f80` -> 1 fns: `00a68360`
+- `s_AtlasTerrain.vsh_00d00f6c` -> 1 fns: `00a68250`
+- `s_Build\GumpArtMask\0%d.dds_00cb915c` -> 1 fns: `005960f0`
+- `s_Data\WorldArt\01000045_noise.tga_00caaddc` -> 1 fns: `004cb850`
+- `s_Data\WorldArt\_00ca58c4` -> 1 fns: `004604a0`
+- `s_EffectTexture.uop_00d02cf4` -> 1 fns: `00a70e5a`
+- `s_EnhancedTexture.uop_00d02e20` -> 1 fns: `00a70e5a`
+- `s_GameTerrain_HybridLighting.psh_00d0111c` -> 1 fns: `009d6810`
+- `s_GameTerrain_HybridLighting.vsh_00d010fc` -> 1 fns: `009d6810`
+- `s_GameTerrain_Offscreen.psh_00d010a0` -> 1 fns: `009d6810`
+- `s_GameTerrain_Offscreen.vsh_00d01084` -> 1 fns: `009d6810`
+- `s_GameTerrain_VertexLighting.psh_00d010dc` -> 1 fns: `009d6810`
+- `s_GameTerrain_VertexLighting.vsh_00d010bc` -> 1 fns: `009d6810`
+- `s_GumpArtMask.uop_00d02e34` -> 1 fns: `00a70e5a`
+- `s_GumpArtMask\_00cb8a2c` -> 2 fns: `0058e1a0`, `0058e280`
+- `s_GumpArtMask_00cb8a78` -> 1 fns: `0058e330`
+- `s_LegacyTerrain.uop_00d02d78` -> 1 fns: `00a70e5a`
+- `s_LegacyTexture.uop_00d02e00` -> 1 fns: `00a70e5a`
+- `s_LuaGetTerrainType_00cbb2b4` -> 1 fns: `004a8b70`
+- `s_Lua_Mythic_Function_Registration_00d03f30` -> 1 fns: `00c15180`
+- `s_MythicColorShader_00d004c8` -> 3 fns: `009c3220`, `00b18258`, `00c14be0`
+- `s_MythicDepthOnlyShader_00d00844` -> 2 fns: `009c6030`, `00c14be0`
+- `s_MythicGeneric_00ceb6cc` -> 2 fns: `009d7eb0`, `00c14be0`
+- `s_MythicNewWaterShader_00d00ad4` -> 2 fns: `009c9120`, `00c14be0`
+- `s_MythicPostProcess_00ceafa4` -> 6 fns: `008be7f0`, `008bf2a0`, `008c20d0`, `008c3160`, `008c3fe0`, `008c4890`
+- `s_MythicShaderLibrary.nl9_00cb8910` -> 1 fns: `0058de80`
+- `s_MythicShaders_00cff540` -> 2 fns: `009b24b0`, `009b2e90`
+- `s_MythicShadowMapShader_00d0093c` -> 3 fns: `009c6cc0`, `00a62750`, `00c14be0`
+- `s_MythicUIDecalShader_00d00ca4` -> 2 fns: `009cba30`, `00c14be0`
+- `s_RadarMapTexture.uop_00d02d34` -> 1 fns: `00a70e5a`
+- `s_ReleaseLegacyTileArt_00cae93c` -> 1 fns: `0051e1d0`
+- `s_ReleaseTileArt_00cae914` -> 1 fns: `0051e1d0`
+- `s_RequestLegacyTileArt_00cae924` -> 1 fns: `0051e1d0`
+- `s_RequestTileArt_00cae904` -> 1 fns: `0051e1d0`
+- `s_TerrainChunk.uop_00d02d20` -> 1 fns: `00a70e5a`
+- `s_TerrainDefinition.uop_00d02c8c` -> 1 fns: `00a70e5a`
+- `s_TerrainTexture.uop_00d02d8c` -> 1 fns: `00a70e5a`
+- `s_Texture.uop_00d02cdc` -> 1 fns: `00a70e5a`
+- `s_TileArtEnhanced\_00cb8a18` -> 2 fns: `0058e1a0`, `0058e280`
+- `s_TileArtEnhanced_00cb8a68` -> 1 fns: `0058e330`
+- `s_TileArtLegacy\_00cb8a08` -> 2 fns: `0058e1a0`, `0058e280`
+- `s_TileArtLegacy_00cb8a58` -> 1 fns: `0058e330`
+- `s_UOBumpMapTerrainLayer_00ca5910` -> 1 fns: `00461790`
+- `s_UODefaultTerrainLayer_00ca58f8` -> 1 fns: `00461790`
+- `s_UOStaticTerrainShader_00cb9610` -> 2 fns: `00596890`, `00c12a60`
+- `s_UOTerrainShader_00ca5878` -> 4 fns: `00461790`, `00461bc0`, `00597c30`, `00c12a60`
+- `s_UOWaterTerrainLayer_00ca58e4` -> 1 fns: `00461790`
+- `s_WorldArt\ref_00cb8a48` -> 1 fns: `0058e330`
+- `s_WorldArt_00cb8a3c` -> 1 fns: `0058e330`
+- `s_tileart.uop_00d02c50` -> 1 fns: `00a70e5a`
