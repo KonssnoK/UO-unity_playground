@@ -41,8 +41,8 @@ are annotated.
 | 0x39   | u64      | **Flags (EC)**              | ✅       | **CC `TileFlag`, identical bit layout** — verified bit-for-bit against CC `tiledata.mul` (phi = 1.00 for ~20 bits; see [Flag mapping](#flag-mapping-ec-vs-cc)). The EC bit names come from the client's own flag table (`UOSA.exe FUN_00c11880`). |
 | 0x41   | u64      | **Flags (legacy)**          | ✅       | Bit-perfect mirror of `0x39`; the legacy-side copy. |
 | 0x49   | u32      | **Facing** (geometry class) | ✅       | Named `facing` in the C# parser (`TileArt.cs:184`). Statics: `1` (35,691 — normal/floor), `2` (432 — **walls**: 98% CC Wall, 92% Impassable), `3` (2,926 — impassable objects), `0` (150). Value 2 cleanly isolates vertical wall geometry. |
-| 0x4D   | i32 × 6  | **EcSpriteLayout** (placeholder) | ⚠️  | `(x0, y0, x1, y1, anchorX, anchorY)` *in spec* but values are placeholder-filled for almost every static — see [discussion](#6-int-blocks-at-0x4d-and-0x65--not-what-they-appear) |
-| 0x65   | i32 × 6  | **LegacySpriteLayout** (placeholder) | ⚠️ | Same caveat. ~70% of tiles have `(0, 0, 45, 46, 0, 0)` — that's a default, not real data |
+| 0x4D   | i32 × 6  | **EcSpriteLayout** (HD)      | ✅       | `(x0, y0, x1, y1, anchorX, anchorY)` — the **real per-tile source rect + draw anchor** in the HD `worldart` texture. **Non-zero on 13,935 tiles = 92.5 % of all HD-art tiles** (zero when the tile has no EC HD sprite). 9,449 distinct values; 11,420 have a non-zero anchor (e.g. tid 2 `[0,0,42,105,25,-24]`, tid 3 `[35,0,68,96,27,0]`). This is the dx/dy placement EcArt.cs consumes. **Not** a placeholder. |
+| 0x65   | i32 × 6  | **LegacySpriteLayout**      | ✅       | Same `(x0,y0,x1,y1,anchorX,anchorY)`, for the **legacy DDS** sprite. Real content rects — 2,828 distinct values (the rect is the trimmed sprite content inside the padded DDS, e.g. 44×42 content in a 64×64 DDS), **not** a default. |
 
 ### Flag mapping (EC vs CC) — RESOLVED ✅ (EC flags == CC TileFlag)
 
@@ -869,9 +869,13 @@ in ``EcArt.DecodeDxt5Rgba``.
    masks). Whenever a wiki spec routes through indirection, double-check
    whether the renderer code path actually uses that indirection or
    shortcuts to the formatted name.
-3. The `EcImage`/`LegacyImage` 6-int blocks are placeholder-filled for
-   most static tiles. Don't trust them as crop rects or anchors without
-   visual verification against the actual DDS content.
+3. The `EcImage`/`LegacyImage` 6-int blocks are **real per-tile
+   `(x0,y0,x1,y1,anchorX,anchorY)` layout** (as UOReader's `B[24] EC IMAGE` /
+   `2D IMAGE` spec and Ghidra `FUN_0051af20` both say) — *not* placeholders.
+   `EcImage` is non-zero on 92.5 % of HD-art tiles; the anchor (`anchorX,
+   anchorY`) is the dx/dy EcArt.cs already uses. The open part is only the exact
+   *coordinate space* for using the `(x0,y0,x1,y1)` rect as a render source-crop
+   (see the 0x4D/0x65 discussion) — the field meaning itself is settled.
 4. EC DDS canvases share their `(0,0)` origin with CC TGA canvases —
    they just extend further right/down. Use CC's canvas dimensions in
    the anchor math and draw the whole EC canvas.
