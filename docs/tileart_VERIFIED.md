@@ -31,16 +31,16 @@ are annotated.
 | 0x14   | u32      | Fixed zero                  | ✅       |                                                        |
 | 0x18   | u32      | **OldId / pre-EC tile id**  | ✅       | `0x00FFFFFF` = "no remap" (21196 tiles); otherwise real CC tile id of the pre-renumber sprite |
 | 0x1C   | u32      | Unknown (statics: always 0) | ✅       | **0 for every paired static** (22,819); the "few hundred non-zero" are land/other tiles, not statics |
-| 0x20   | u32      | **BodyType**                | ✅       | Named `BodyType` in the C# parser ([TileArt.cs:175](../../src/ClassicUO.Assets/TileArt.cs#L175)). Near-constant: `400` (human) in 22,717 statics, `666` (gargoyle) in 102 — a default owner/animation body id |
+| 0x20   | u32      | **BodyType**                | ✅       | Named `BodyType` in the C# parser (`TileArt.cs:175`). Near-constant: `400` (human) in 22,717 statics, `666` (gargoyle) in 102 — a default owner/animation body id |
 | 0x24   | u8       | Unknown                     | ✅       | Two values: 0x80 (land) or 0 (statics). On statics it is ~always 0 |
 | 0x25   | f32      | **Render scale**            | ✅       | 1.0 default; `2.0` in ~530 statics, with rare `1.25/1.5/1.6/3.5`. Per-tile HD draw scale (`0x24` is its land-side companion) |
 | 0x29   | u32      | Always 0                    | ✅       |                                                        |
-| 0x2D   | f32      | **Lights[0]**               | ✅       | `Lights[0]` in C# parser ([TileArt.cs:179](../../src/ClassicUO.Assets/TileArt.cs#L179)). Range -5.0..2.0; non-zero in ~1000 tiles (light-source params) |
+| 0x2D   | f32      | **Lights[0]**               | ✅       | `Lights[0]` in C# parser (`TileArt.cs:179`). Range -5.0..2.0; non-zero in ~1000 tiles (light-source params) |
 | 0x31   | f32      | **Lights[1]**               | ✅       | `Lights[1]`. Range -11.5..0; non-zero in ~1200 tiles   |
 | 0x35   | u32      | **Linked tile id**          | ✅       | Non-zero on 1,929 statics (mostly walls/posts). **100 % resolve to a valid CC tile id** (never the tile's own id) — a cross-reference to an alternate/linked tile (e.g. wall→hull variant). `0` = none |
 | 0x39   | u64      | **Flags (EC)**              | ✅       | **CC `TileFlag`, identical bit layout** — verified bit-for-bit against CC `tiledata.mul` (phi = 1.00 for ~20 bits; see [Flag mapping](#flag-mapping-ec-vs-cc)). The EC bit names come from the client's own flag table (`UOSA.exe FUN_00c11880`). |
 | 0x41   | u64      | **Flags (legacy)**          | ✅       | Bit-perfect mirror of `0x39`; the legacy-side copy. |
-| 0x49   | u32      | **Facing** (geometry class) | ✅       | Named `facing` in the C# parser ([TileArt.cs:184](../../src/ClassicUO.Assets/TileArt.cs#L184)). Statics: `1` (35,691 — normal/floor), `2` (432 — **walls**: 98% CC Wall, 92% Impassable), `3` (2,926 — impassable objects), `0` (150). Value 2 cleanly isolates vertical wall geometry. |
+| 0x49   | u32      | **Facing** (geometry class) | ✅       | Named `facing` in the C# parser (`TileArt.cs:184`). Statics: `1` (35,691 — normal/floor), `2` (432 — **walls**: 98% CC Wall, 92% Impassable), `3` (2,926 — impassable objects), `0` (150). Value 2 cleanly isolates vertical wall geometry. |
 | 0x4D   | i32 × 6  | **EcSpriteLayout** (placeholder) | ⚠️  | `(x0, y0, x1, y1, anchorX, anchorY)` *in spec* but values are placeholder-filled for almost every static — see [discussion](#6-int-blocks-at-0x4d-and-0x65--not-what-they-appear) |
 | 0x65   | i32 × 6  | **LegacySpriteLayout** (placeholder) | ⚠️ | Same caveat. ~70% of tiles have `(0, 0, 45, 46, 0, 0)` — that's a default, not real data |
 
@@ -79,7 +79,7 @@ exactly. So **`0x39` can be fed straight into a CC `TileFlag` consumer.**
 > `TileID` (offset `0x06`) **is the CC item_id directly** (no `0x4000` art
 > offset). The bad pairing makes the flags look uncorrelated (an earlier draft
 > of this doc wrongly concluded "EC flags are independent of CC" because of it).
-> Pair by `tid == item_id`. Reproduce: [`scripts/flag_corr.py`](../scripts/flag_corr.py).
+> Pair by `tid == item_id`. Reproduce: ``scripts/flag_corr.py``.
 
 #### EC flag enum <a name="ec-flag-enum"></a>
 
@@ -127,7 +127,7 @@ Wiki labels in parentheses match the original `Tileart.creole` for cross-referen
 
 ### TAEPropID — the property ids <a name="taepropid-verified"></a>
 
-`TAEPropID` (one byte per property, from [TileArt.cs:139](../../src/ClassicUO.Assets/TileArt.cs#L139)).
+`TAEPropID` (one byte per property, from `TileArt.cs:139`).
 The three with a CC equivalent are **verified exact** (39,203 paired statics,
 PropertiesEc vs CC `tiledata.mul`):
 
@@ -276,20 +276,20 @@ so the HD path falls back to alpha-trim while we investigate.
 
 ## C# implementation map (updated)
 
-- [`src/ClassicUO.Assets/EcArtLoader.cs`](../../src/ClassicUO.Assets/EcArtLoader.cs)
+- ``src/ClassicUO.Assets/EcArtLoader.cs``
   - `TryGetDdsByArtId(artId)` — fetches the **color** DDS bytes by
     formatted tile_id (`build/tileartlegacy/{item_id:08}.dds`).
   - `TryGetMaskByArtId(artId)` — fetches the **hue mask** DDS bytes
     (`build/tileartlegacy/{1_000_000 + item_id:08}.dds`), or returns
     false when the sprite ships no mask.
-- [`src/ClassicUO.Renderer/Arts/EcArt.cs`](../../src/ClassicUO.Renderer/Arts/EcArt.cs)
+- ``src/ClassicUO.Renderer/Arts/EcArt.cs``
   - Decodes the color DDS → `Texture2D` and caches per-tile.
   - When a mask DDS is present, CPU-decodes both DXT5 buffers via
     `DecodeDxt5Rgba`, applies `ApplyHueMaskFromDds`, and replaces the
     texture with a fresh uncompressed (`SurfaceFormat.Color`) one.
 - Render sites use **CC art's canvas dimensions** for the anchor math:
-  - [`Game/GameObjects/Views/View.cs`](../../src/ClassicUO.Client/Game/GameObjects/Views/View.cs) (`DrawStatic`, `DrawStaticAnimated`)
-  - [`Game/Map/ChunkMesh.cs`](../../src/ClassicUO.Client/Game/Map/ChunkMesh.cs) (`TryAddStaticLike`)
+  - ``Game/GameObjects/Views/View.cs`` (`DrawStatic`, `DrawStaticAnimated`)
+  - ``Game/Map/ChunkMesh.cs`` (`TryAddStaticLike`)
 - Hue handling: EC draws pass the **same hueVec as the CC path** (with
   `IsPartialHue` honoured) — the mask preprocessing in `EcArt` makes
   the CC shader's strict `R==G==B` test produce per-pixel decisions
@@ -299,8 +299,8 @@ so the HD path falls back to alpha-trim while we investigate.
 - Shadows: EC draws use the **CC texture/UV** for `DrawShadow`, because
   EC's canvas has lots of transparent padding that would render as an
   oversized shadow blob.
-- [`EcStringDictionary`](../../src/ClassicUO.Assets/EcStringDictionary.cs)
-  and [`EcTileArtLoader`](../../src/ClassicUO.Assets/EcTileArtLoader.cs)
+- ``EcStringDictionary``
+  and ``EcTileArtLoader``
   still load and parse the SUB_9_7 records — they're used for tile
   *metadata* (flags, properties) but not for sprite resolution.
 
@@ -434,7 +434,7 @@ the descriptor through different consumers (`005960f0`, `00445e70`).
 
 Cross-checked CUO against the EC reference render of the telescope
 multi (#207, tiles 5209-5274) via the offline composite at
-[`tools/ec_research/out/telescope_composite_cc.png`](../out/telescope_composite_cc.png).
+``tools/ec_research/out/telescope_composite_cc.png``.
 
 UOReader's draw helper (`MultiItem.cs` → `private void a(...)` line 352)
 is the same for CC and EC, just with different cell pitches:
@@ -685,7 +685,7 @@ they lose only the noise overlay — a subtle aesthetic loss.
 | `DAT_00d0a324`  | 0x00d0a324  | `0.6667f` | `= 1/1.5` (inverse, used elsewhere)    |
 | `DAT_00d0a0dc`  | 0x00d0a0dc  | `2^32`    | int↔uint negative-value conversion     |
 
-Tool: [`tools/ec_research/scripts/81_read_constants.py`](../scripts/81_read_constants.py)
+Tool: ``tools/ec_research/scripts/81_read_constants.py``
 parses PE headers and reads `.rdata` at those VAs.
 
 ### Per-tile coverage
@@ -743,7 +743,7 @@ draw(hdTexture, source=hdBbox,
 ```
 
 `Arts.GetRealArtBounds` is already cached in
-[`src/ClassicUO.Renderer/Arts/Art.cs`](../../src/ClassicUO.Renderer/Arts/Art.cs)
+``src/ClassicUO.Renderer/Arts/Art.cs``
 line 89 (it computes the bbox at first art-load).
 
 **CPU DXT5 decode for HD alpha-trim**: `Texture2D.GetData<Color>` on a
@@ -844,7 +844,7 @@ FNA's `Texture2D.GetData<Color>` on a DXT5 surface returns the **raw
 compressed block bytes** reinterpreted as Color structs (not decoded
 pixels). Writing those back to a `SurfaceFormat.Color` texture produces
 a recognisable but completely wrong checkerboard. The DXT5 decoder lives
-in [`EcArt.DecodeDxt5Rgba`](../../src/ClassicUO.Renderer/Arts/EcArt.cs).
+in ``EcArt.DecodeDxt5Rgba``.
 
 ## Lessons learned the hard way
 

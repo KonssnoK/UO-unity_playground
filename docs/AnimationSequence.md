@@ -9,7 +9,7 @@ how many frames each animation group has, and optional group→group remaps.
 This archive is **not EC-specific** — the modern Classic Client ships the same
 `AnimationSequence.uop` and ClassicUO already parses it in
 `AnimationsLoader.ProcessAnimationSequenceData`
-([AnimationsLoader.cs:839](../../src/ClassicUO.Assets/AnimationsLoader.cs#L839)).
+(`AnimationsLoader.cs:839`).
 The fixed header + entry layout below is taken from that parser and verified
 against the EC bytes; field names match the CC reader.
 

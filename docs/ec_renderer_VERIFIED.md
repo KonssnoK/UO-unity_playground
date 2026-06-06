@@ -194,7 +194,7 @@ CUO now uses **option B**: surface tiles whose group master is fully
 opaque fall back to the per-tile legacy DDS (CC-equivalent diamond),
 keeping the HD path only for tiles whose masters have alpha (walls,
 items, foliage). Detection lives in
-[`EcArt.TryGet`](../../src/ClassicUO.Renderer/Arts/EcArt.cs) using
+``EcArt.TryGet`` using
 `IsFullyOpaqueDds` on the master DDS — DXT1 is always opaque (no alpha
 channel by spec), DXT5 is detected by scanning every block's
 `a0/a1 = 255` endpoints.

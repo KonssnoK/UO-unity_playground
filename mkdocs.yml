@@ -1,0 +1,43 @@
+site_name: Enhanced Client UOP Format Docs
+site_description: Reverse-engineered Ultima Online Enhanced Client (.uop) file formats
+docs_dir: docs
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - tables
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.details
+
+# No explicit nav: MkDocs auto-builds it from docs/, and README.md is treated
+# as the section index (home page). .creole/_raw files are ignored by the build.
+exclude_docs: |
+  _raw/
+  wiki_assumptions/

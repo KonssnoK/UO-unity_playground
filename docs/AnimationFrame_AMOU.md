@@ -11,7 +11,7 @@ algorithm here is byte-for-byte equivalent to UOReader's
 `UOFrameBin.cs` + `UOFrame.cs`.
 
 A working Python reference decoder is in
-[`tools/ec_research/scripts/amou_decode_verified.py`](../scripts/amou_decode_verified.py).
+``tools/ec_research/scripts/amou_decode_verified.py``.
 It produces correct sprites for human-male idle (body 400, action 0).
 
 ## File layout

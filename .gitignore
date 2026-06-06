@@ -38,3 +38,6 @@ Assets/Plugins/Zlib32.dll
 Assets/Shaders/EC_Analysis/
 
 Assets/Shaders/EC_Shaders/
+
+# MkDocs build output
+_site/
