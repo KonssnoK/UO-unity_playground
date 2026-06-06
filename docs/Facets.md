@@ -34,23 +34,55 @@ the actual tiles).
 build/sectors/facet_{NN}/{sector:08}.bin       (NN = 2-digit facet index)
 ```
 
-- Each `facet{N}.uop` holds **~7,169 sector records** (one per map sector),
-  ~26 MB per archive. `facet{N}x.uop` is a parallel set (the `x` variant — the
-  two cover terrain vs. static layers / base vs. overlay).
-- A sector record is the binary terrain+static placement for that sector
-  (heights, land tile ids, static items). Each is **~22 KB** (the common size is
-  22,043 B; 160 of the first 300 share it), starting with a small header then a
-  long run of per-cell records (land tile ids such as `0x0244` are visible in
-  the raw bytes). The exact cell layout (terrain block vs. statics block split,
-  per-cell stride) is **not yet decoded**.
+- Each `facet{N}.uop` holds **~7,169 sector records** (one per **64×64-cell**
+  map sector), ~26 MB per archive. `facet{N}x.uop` is a parallel set (the `x`
+  variant — a second copy, base vs. overlay).
 
-> **Priority note:** this is the largest undecoded EC archive *by size*, but
-> **low value for a CC-compatible port** — ClassicUO renders maps from CC
-> `map*.mul` + `statics*.mul`, so these facet sectors are bypassed entirely.
-> Decoding them is only worthwhile for a *pure-EC* map renderer.
+### Sector record format — VERIFIED ✅
+
+Decoded from UOReader's `FacetSectorItem`/`FacetSectorTile`/`FacetSectorDelimiter`/
+`FacetSectorStatic` classes and verified against the data: **7168/7169 sectors
+per facet consume their buffer exactly** (the lone failure is an empty/special
+sector), confirmed across `facet0`, `facet0x`, `facet3`.
+
+```
+u8   facetID
+u16  sectorID                    # == the {sector:08} in the filename
+64 × 64 tiles (row-major, x outer, y inner) {
+    i8   z                       # land height
+    u16  landGraphic             # land tile id
+    u8   delimiterCount
+    delimiterCount × {           # terrain-transition / blend edges  (6 B)
+        u8   direction           # which neighbour edge (0,1,2,…)
+        i8   z
+        u32  graphic             # neighbouring terrain graphic to blend
+    }
+    u8   staticCount
+    staticCount × {              # static items in this cell  (9 B)
+        u32  graphic             # static tile id
+        i8   z
+        u32  color               # hue / tint
+    }
+}
+```
+
+- **delimiters** are the EC terrain auto-tiling data — per-cell directional
+  blend entries that fill the seams between adjacent land types (CC does this
+  with transition tiles; EC stores explicit neighbour graphics + direction).
+- **statics** are the per-cell static placements (the EC equivalent of
+  `statics*.mul`). facet0 holds ~2.9M statics and ~1.8M delimiters.
+- The `x` archive carries an almost identical static count — a base/overlay or
+  Trammel/Felucca-style parallel layer.
+
+> **Port note:** ClassicUO renders maps from CC `map*.mul` + `statics*.mul`, so
+> for a CC-compatible client these sectors are redundant. They're only needed
+> for a **pure-EC** map renderer — but the format is now fully known, so that
+> path is unblocked.
 
 ## Status
 
-Naming fully resolved (via the UOReader dictionary). The per-sector chunk binary
-layout is the main outstanding EC map-rendering task; for now the CC
-`map*.mul`/`statics*.mul` path is used and these archives are bypassed.
+**Fully decoded** ✅ — naming (UOReader dictionary) and the per-sector chunk
+binary layout (verified 7168/7169 exact). The `facetdefinition` per-map header
+list is the only remaining minor unknown. ClassicUO still uses the CC
+`map*.mul`/`statics*.mul` path, so these archives are bypassed for the
+CC-compatible client, but the format is no longer a blocker for pure-EC map work.
