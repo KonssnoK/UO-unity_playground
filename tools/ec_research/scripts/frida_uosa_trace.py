@@ -1,105 +1,85 @@
-"""Runtime function tracer for the Enhanced Client (UOSA.exe) via Frida.
+"""Runtime tracer for the Enhanced Client (UOSA.exe) via Frida.
 
-UOSA.exe has ImageBase 0x400000 and **no ASLR** (verified), so the absolute
-addresses from the Ghidra dump map 1:1 to runtime addresses — no rebasing.
+UOSA.exe has ImageBase 0x400000 and **no ASLR** (verified at runtime: the
+spawned module base is 0x400000), so absolute addresses from the Ghidra dump
+map 1:1 — no rebasing.
 
-Usage (run from an ELEVATED shell — UOSA runs elevated, so Frida must match):
-    # spawn a fresh client and trace from the very start (catches asset load):
-    python frida_uosa_trace.py --spawn "C:/Games/Electronic Arts/Ultima Online Enhanced/UOSA.exe"
-    # or attach to a running one (same privilege level required):
-    python frida_uosa_trace.py --attach UOSA.exe
+Spawn a fresh client (catches asset load from the very start) and trace:
 
-Add/disable hooks in HOOKS below. Each hook logs entry (args from the cdecl/
-thiscall stack), and optionally hexdumps a byte buffer pointed to by an arg
-(handy for parsers: see how many bytes each opcode consumes).
+    python frida_uosa_trace.py                       # archive-load trace (default)
+    python frida_uosa_trace.py --hook 0x5782b0,0x578b70   # also hook these static addrs
+    python frida_uosa_trace.py --seconds 30
 
-This is a generic capability — point it at any function to map it at runtime.
+Notes
+-----
+* Spawning works at the current user's privilege (no need to match the
+  elevated, already-running client). It opens a second UOSA window.
+* The binary-factory record parsers read fields with **inline** memory
+  accesses (not a callable helper), so you can't hook "the field reader".
+  What you CAN hook: real functions (constructors, vtable methods, Win32
+  APIs). Some tiny/jump-table functions can't be trampoline-hooked — those
+  are reported as "unhookable" and skipped.
+* Confirmed by this tracer: all archives load at startup in registry order
+  (facet0..6, tileart, string_dictionary, AnimationDefinition, ...), so the
+  tileart/effects parse happens during the spawn window — no login needed.
 """
-import sys, argparse, frida
+import frida, time, argparse, json
 
-# (label, static_addr, arg_count, dump_arg_index_or_None, dump_len)
-# Seeded with tileart/effect-parse candidates from the static analysis.
-HOOKS = [
-    # effect-object factory dispatch (switch on type id -> alloc+construct)
-    ("effectFactory_005782b0", 0x005782b0, 1, None, 0),
-    # the per-record stream cursor read helpers (0040c6c0 = bounds-check read)
-    ("streamRead_0040c6c0",     0x0040c6c0, 4, None, 0),
-    # add the tileart record parser here once located, e.g.:
-    # ("tileartParse_00XXXXXX", 0x00XXXXXX, 4, 0, 256),
-]
+EXE = r"C:\Games\Electronic Arts\Ultima Online Enhanced\UOSA.exe"
 
-JS_TEMPLATE = r'''
-var BASE = ptr(0x400000);
-var hooks = HOOKS_JSON;
-hooks.forEach(function (h) {
-    var addr = ptr(h.addr);
-    try {
-        Interceptor.attach(addr, {
-            onEnter: function (args) {
-                var rec = { fn: h.label, addr: h.addr.toString(16), args: [] };
-                for (var i = 0; i < h.argc; i++) {
-                    try { rec.args.push(this.context ? null : null); } catch (e) {}
-                }
-                // read first few stack dwords (cdecl args at [esp+4..])
-                try {
-                    var sp = this.context.esp;
-                    var a = [];
-                    for (var i = 1; i <= h.argc; i++) a.push(sp.add(i*4).readU32());
-                    rec.stack = a;
-                } catch (e) { rec.stack_err = String(e); }
-                if (h.dump >= 0) {
-                    try {
-                        var p = ptr(rec.stack[h.dump]);
-                        rec.dump = p.readByteArray(h.dumplen);
-                    } catch (e) { rec.dump_err = String(e); }
-                }
-                send(rec, rec.dump);
-            }
-        });
-        send({ status: "hooked", label: h.label, addr: h.addr.toString(16) });
-    } catch (e) {
-        send({ status: "hook_failed", label: h.label, err: String(e) });
-    }
+JS = r'''
+function expt(mod, name){
+  try { return Process.getModuleByName(mod).getExportByName(name); }
+  catch(e){ try { return Module.getGlobalExportByName(name); } catch(e2){ return null; } }
+}
+var m = Process.getModuleByName("UOSA.exe");
+send({base: m.base.toString(), size: m.size});
+
+// --- archive-load trace (CreateFileW) ---
+var cf = expt("kernel32.dll", "CreateFileW");
+if (cf) Interceptor.attach(cf, { onEnter: function(a){
+  try { var p = a[0].readUtf16String(); if (p && /\.uop$/i.test(p)) send({uop: p.replace(/^.*[\\/]/,'')}); } catch(e){}
+}});
+
+// --- user hooks by static address ---
+var HOOKS = HOOKS_JSON;
+HOOKS.forEach(function(addr){
+  try {
+    Interceptor.attach(ptr(addr), { onEnter: function(args){
+      var c = this.context;
+      send({ hook: addr, eax: (c.eax>>>0), ecx: (c.ecx>>>0),
+             arg0: this.context.esp.add(4).readU32(), ret: this.returnAddress.toString() });
+    }});
+    send({hooked: addr});
+  } catch(e){ send({unhookable: addr, err: String(e)}); }
 });
-send({ status: "ready" });
+send({status: "ready"});
 '''
-
-def build_js():
-    import json
-    hk = [{"label": l, "addr": a, "argc": c, "dump": (d if d is not None else -1), "dumplen": dl}
-          for (l, a, c, d, dl) in HOOKS]
-    return JS_TEMPLATE.replace("HOOKS_JSON", json.dumps(hk))
-
-def on_message(msg, data):
-    if msg["type"] == "send":
-        p = msg["payload"]
-        if data:
-            print(p, "bytes=", data.hex())
-        else:
-            print(p)
-    else:
-        print("ERR", msg)
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--spawn"); ap.add_argument("--attach")
+    ap.add_argument("--hook", default="", help="comma-separated static addrs, e.g. 0x5782b0,0x578b70")
+    ap.add_argument("--seconds", type=int, default=20)
+    ap.add_argument("--exe", default=EXE)
     args = ap.parse_args()
-    if args.spawn:
-        pid = frida.spawn([args.spawn])
-        session = frida.attach(pid)
-        resume = pid
-    elif args.attach:
-        session = frida.attach(args.attach)
-        resume = None
-    else:
-        ap.error("need --spawn <exe> or --attach <name|pid>")
-    script = session.create_script(build_js())
-    script.on("message", on_message)
-    script.load()
-    if resume is not None:
-        frida.resume(resume)
-    print("[tracer running — Ctrl+C to stop]")
-    sys.stdin.read()
+
+    hooks = [int(x, 16) for x in args.hook.split(",") if x.strip()]
+    js = JS.replace("HOOKS_JSON", json.dumps(hooks))
+
+    def on(msg, data):
+        print(msg.get("payload") if msg["type"] == "send" else msg, flush=True)
+
+    pid = frida.spawn([args.exe])
+    print("spawned pid", pid, flush=True)
+    s = frida.attach(pid)
+    sc = s.create_script(js); sc.on("message", on); sc.load()
+    frida.resume(pid)
+    try:
+        time.sleep(args.seconds)
+    finally:
+        print("--- stopping ---", flush=True)
+        try: frida.kill(pid)
+        except Exception: pass
 
 if __name__ == "__main__":
     main()
