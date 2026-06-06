@@ -38,9 +38,16 @@ build/sectors/facet_{NN}/{sector:08}.bin       (NN = 2-digit facet index)
   ~26 MB per archive. `facet{N}x.uop` is a parallel set (the `x` variant — the
   two cover terrain vs. static layers / base vs. overlay).
 - A sector record is the binary terrain+static placement for that sector
-  (heights, land tile ids, static items). **Format not yet decoded** — this is
-  the big map-rendering item; decoding it would replace CC's
-  map/statics loaders for EC.
+  (heights, land tile ids, static items). Each is **~22 KB** (the common size is
+  22,043 B; 160 of the first 300 share it), starting with a small header then a
+  long run of per-cell records (land tile ids such as `0x0244` are visible in
+  the raw bytes). The exact cell layout (terrain block vs. statics block split,
+  per-cell stride) is **not yet decoded**.
+
+> **Priority note:** this is the largest undecoded EC archive *by size*, but
+> **low value for a CC-compatible port** — ClassicUO renders maps from CC
+> `map*.mul` + `statics*.mul`, so these facet sectors are bypassed entirely.
+> Decoding them is only worthwhile for a *pure-EC* map renderer.
 
 ## Status
 
