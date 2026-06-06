@@ -41,3 +41,40 @@ Assets/Shaders/EC_Shaders/
 
 # MkDocs build output
 _site/
+
+# ── tools/ — track the source scripts, exclude heavy/generated/third-party ──
+# Python caches & virtualenvs
+tools/**/__pycache__/
+tools/**/*.pyc
+tools/**/.venv/
+
+# Ghidra install, JDK, project DBs, and the large decompile dumps.
+# (Regenerate the .jsonl via tools/ghidra/scripts/*.java — see tools README.)
+tools/ghidra/ghidra_*_PUBLIC/
+tools/ghidra/jdk/
+tools/ghidra/*.zip
+tools/ghidra/project/
+tools/ghidra/*.jsonl
+
+# Generated research output and image/data dumps
+tools/ec_research/out/
+tools/ec_research/dump_*/
+
+# Mono launcher runtime (53 MB of binaries)
+tools/monokickstart/
+
+# .NET build artifacts
+tools/**/bin/
+tools/**/obj/
+
+# UOReader redistributable binaries (keep decompiled/ source + Dictionary.dic)
+tools/ec_research/uoreader/*.exe
+tools/ec_research/uoreader/*.dll
+tools/ec_research/uoreader/*.zip
+tools/ec_research/uoreader/*.config
+tools/ec_research/uoreader/AnimationFrameDump/
+
+# Generated logs and binary dumps that slipped through
+tools/**/*.log
+tools/ec_research/uoreader/AnimationFrameDump
+tools/ec_research/out_table*.bin
