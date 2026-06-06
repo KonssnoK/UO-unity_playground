@@ -81,3 +81,7 @@ tools/ec_research/out_table*.bin
 
 # extracted shader text (regenerate from Shaders.uop)
 tools/ec_research/shaders_extracted/
+
+# Frida-captured shader dumps (runtime)
+tools/ec_research/captured_shaders/
+tools/ec_research/scripts/captured_shaders/

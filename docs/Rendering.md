@@ -12,11 +12,21 @@ sources: `tools/ec_research/shaders_extracted/`.
 > rendered by Gamebryo's shader system** — `GameTerrain_HybridLighting`,
 > `GameTerrain_VertexLighting`, `GameTerrain_Offscreen`, `AtlasTerrain`
 > (`.psh`/`.vsh`). Those are **referenced by name in UOSA.exe but have no HLSL
-> source anywhere** (not in any `.uop`, not on disk, not embedded as text). They
-> survive only as **~14 compiled `ps_2_0` bytecode blobs inside UOSA.exe** (raw
-> D3D9 token stream, no DXBC container). Recovering the terrain shader math means
-> locating + disassembling that bytecode (e.g. via a D3D9 shader disassembler) —
-> a separate task, not covered here.
+> source or recoverable bytecode anywhere** — not in any `.uop`, not on disk, not
+> embedded as text or as standalone shader blobs (a scan for D3D9 token streams
+> in the exe finds only one real shader). They are **generated at runtime by
+> Gamebryo's `NiD3DShader` default-shader system** from the terrain material /
+> lighting setup.
+>
+> **The only way to recover them is to capture the bytecode at creation time** —
+> hook `IDirect3DDevice9::CreatePixelShader`/`CreateVertexShader` and dump.
+> `tools/ec_research/scripts/frida_d3d9_shaders.py` does this. Caveat: shaders
+> are created only while the client *renders*, and **terrain shaders only appear
+> in-world** — so the spawn must reach the world (close any already-running
+> elevated client first so it isn't single-instanced out, then log in). The
+> D3D9/COM-vtable hook itself is verified working (it attaches through
+> `Direct3DCreate9 → CreateDevice → device vtable`); it just needs the client to
+> draw terrain.
 
 ## Hue / recolour model — DEFINITIVE
 
