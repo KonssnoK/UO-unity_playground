@@ -19,6 +19,11 @@ DDS pixel format for entries 0/1: `RGBBitCount=32`, `R=0x00FF0000 G=0x0000FF00
 B=0x000000FF A=0xFF000000` → stored **BGRA** in file bytes (offset 128 = pixel
 data, no mips).
 
+**Names** (verified via the UOReader dictionary): entry 1 = `build/hues/hues.dds`
+(the ramp); entries 2+ = `data/definitions/hues/hue{N:04}.bmp` (1-based —
+`hue0001.bmp` = `hues.mul[0]`). Entry 0 (the 64×64 DDS) is the only unnamed
+entry.
+
 ## entry1 — the hue-ramp texture (HueSampler)
 
 1024×1024 RGBA. Layout (verified by sampling):
