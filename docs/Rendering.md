@@ -2,8 +2,21 @@
 
 `Shaders.uop` ships **12 plain-HLSL shaders** (D3D9, `ps_2_0`/`vs_1_1`/`vs_2_0`,
 with `//#param` permutation directives). They are the **ground truth** for the EC
-rendering model — far more authoritative than guessing from output. Extracted
+**2D layer** — far more authoritative than guessing from output. Extracted
 sources: `tools/ec_research/shaders_extracted/`.
+
+> **Scope — `Shaders.uop` is only the UO 2D layer, not the whole renderer.**
+> EC is built on the **Gamebryo** engine (`Gamebryo`/`NiD3DShader`/`NiShader`
+> strings in UOSA.exe; `EffectTexture.uop` is Gamebryo NIF). `Shaders.uop`
+> contains the UO-specific sprite/UI/effect/post shaders below. **Terrain is
+> rendered by Gamebryo's shader system** — `GameTerrain_HybridLighting`,
+> `GameTerrain_VertexLighting`, `GameTerrain_Offscreen`, `AtlasTerrain`
+> (`.psh`/`.vsh`). Those are **referenced by name in UOSA.exe but have no HLSL
+> source anywhere** (not in any `.uop`, not on disk, not embedded as text). They
+> survive only as **~14 compiled `ps_2_0` bytecode blobs inside UOSA.exe** (raw
+> D3D9 token stream, no DXBC container). Recovering the terrain shader math means
+> locating + disassembling that bytecode (e.g. via a D3D9 shader disassembler) —
+> a separate task, not covered here.
 
 ## Hue / recolour model — DEFINITIVE
 
