@@ -105,10 +105,22 @@ bits 32+ are **EC-specific render flags with no CC equivalent**):
 | 14 | article_a | 30 | stair_back | | | |
 | 15 | article_an | 31 | stair_right | | | |
 
-(`article_the`/`article` are aliases for bits 14|15 combined = `0xC000`.) The
-notable EC-specific bit is **`pixelbleed` (bit 37, 28 % of statics)** — a
-texture-edge bleed/sampling hint for the HD renderer; `alphablend` (35) and the
-unnamed bit 34 (4 %) are the next most common.
+(`article_the`/`article` are aliases for bits 14|15 combined = `0xC000`.)
+
+### EC-only bit semantics (characterised vs CC tile types + names)
+
+| bit | name | set % | what it marks (from CC-profile + tile names) |
+|----:|------|------:|----------------------------------------------|
+| 37 | **pixelbleed** | 29.3 | Ground/surface/foliage tiles (Surf 40 %, Bg 35 %, Foliage 20 %; e.g. shrine floors). Edge-texel **bleed** so HD textures tile seamlessly without seams. |
+| 34 | *(unnamed)* | 4.3 | **Animated ground surfaces** — Bg 86 %, Surf 49 %, Animation 14 % (water/lava/energy-field type tiles). |
+| 35 | **alphablend** | 1.3 | Alpha-blended/see-through tiles — sample names are **"cave wall"** (the fade-out cave entrances), plus translucent (15 %) tiles. |
+| 33 | **nodraw** | 0.3 | Invisible markers — tiles literally named `nodraw` / `regions` (don't render). |
+| 32 | nohouse | — | "no house placement here" flag. |
+| 36 | noshadow / 39 playAnimOnce / 40 multiMovable | rare | self-descriptive render hints. |
+
+These are HD-renderer hints with **no CC equivalent**; they don't affect
+gameplay, so a CC-targeted port can ignore them (or honour `nodraw`/`alphablend`
+for visual parity).
 
 ## Sub-sections after the header
 
