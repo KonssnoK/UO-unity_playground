@@ -8,6 +8,11 @@ Each `<UopName>.md` here synthesises three sources of truth:
 
 The complete name-resolution pipeline (a hand-built C# struct map for the C# port) is in ``ec/patterns.py`` and its JSON twin at ``../out/uop_patterns.json``.
 
+**Beyond the file formats:**
+- [Rendering.md](Rendering.md) — how the EC renders (hue/mask/lighting/bloom), straight from the shaders in `Shaders.uop`.
+- [RuntimeTracing.md](RuntimeTracing.md) — dynamic analysis of `UOSA.exe` via Frida (no ASLR; spawn-and-trace).
+- [EC_Terrain_Renderer_Findings.md](EC_Terrain_Renderer_Findings.md) — the EC chunked-mesh terrain renderer: record layout, 4-stage splat recipe, vertex format, data join (from APItrace + Ghidra). **See the "P1 CORRECTION" section**: terrain albedo is `Texture.uop`/`build/worldart` (NOT `TerrainTexture.uop` atlases), resolved fully-statically via `TerrainDefinition.TextureInfo → string_dictionary → "{worldartId}_{Name}.tga"`. Q3 "How to pull the textures at runtime" gives the load-time algorithm (no pre-generated table — build the lookup from the uops at startup).
+
 ## Quick coverage table
 
 | UOP                              | Entries | Naming pattern                                              | Note                                  |
@@ -17,8 +22,8 @@ The complete name-resolution pipeline (a hand-built C# struct map for the C# por
 | [tileart.uop](tileart.md)                      | 40,426 | `build/tileart/{id:08}.bin`                                | Tile metadata (binary); 7,598 unmapped |
 | [gumpartLegacyMUL.uop](MiscArchives.md)        |  4,376 | `build/gumpartlegacymul/{id:08}.tga`                       | Classic-format gumps (TGA)            |
 | [GumpArtMask.uop](GumpArtMask.md)              |  4,597 | `build/gumpartmask/0{id+1000000:d}.dds`                    | **Cracked via disassembly**           |
-| [TerrainTexture.uop](TerrainTexture.md)        |     38 | `build/terraintexture/{id:08}.dds`                         | 256×256 atlases                       |
-| [TerrainDefinition.uop](TerrainDefinition.md)  |    249 | `build/terraindefinition/{N}.bin` (non-padded)            | **Naming resolved 100%** (UOReader dic) |
+| [TerrainTexture.uop](TerrainTexture.md)        |     38 | `build/terraintexture/{id:08}.dds`                         | 256² gradient/glow atlases — **NOT** terrain albedo (unused by terrain) |
+| [TerrainDefinition.uop](TerrainDefinition.md)  |    249 | `build/terraindefinition/{N}.bin` (non-padded)            | **Format decoded** — TextureInfo → string-dict → WorldArt |
 | [LegacyTerrain.uop](LegacyTerrain.md)          |  4,108 | unrecoverable (XML payload)                                | Naming confirmed unrecoverable; XML self-IDs |
 | [AnimationFrame{1..6}.uop](AnimationFrame.md)  | 34,836 | `build/animationframe/{body:06}/{action:02}.bin`           | AMOU; **5 dirs packed/file**, bodies 0–1681 |
 | [AnimationDefinition.uop](AnimationDefinition.md) | 1,197 | `build/animationdefinition/{id:08}.bin`                  | Per-body action definitions           |

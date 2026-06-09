@@ -688,6 +688,62 @@ they lose only the noise overlay — a subtle aesthetic loss.
    the natural place to host all this — EC uses the same multi-stage
    sampler pipeline for terrain and surface statics.
 
+### Animated statics — the `Textures` namespace IS the animation source
+
+The fourth texture group (`Textures`) is **NOT the EC sprite at higher LOD** —
+it's a **separate animated overlay** that EC composites on top of the static
+tile. This is how braziers and torches flicker:
+
+| Tile id | namespace[0..2] | namespace[3] `Textures` slot |
+|--------:|-----------------|------------------------------|
+| 3633 (brazier)  | `00003633_Brazier.tga` / `TileArtLegacy/3633.tga` / `TileArtEnhanced/3633.tga` | **`Textures/00000007_CandleA.tga`** |
+| 2567 (wall torch) | `00002567_wall_torch.tga` / `TileArtLegacy/2567.tga` / `TileArtEnhanced/2567.tga` | **`Textures/00000009_SconceB.tga`** |
+| 6228 (skull-w-candle) | `00006228_SkullWithCandle.tga` / `TileArtLegacy/6228.tga` / `TileArtEnhanced/6228.tga` | **`Textures/00000007_CandleA.tga`** |
+| 22200 (carpet, **not** animated) | empty / `TileArtLegacy/22200.tga` / `TileArtEnhanced/22200.tga` | **empty** |
+
+So:
+- **set[0] WorldArt** = CC-era full-resolution sprite (high-res replacement)
+- **set[1] TileArtLegacy** = the static legacy 2D tile sprite (the one CUO already reads)
+- **set[2] TileArtEnhanced** = EC version of the static tile sprite
+- **set[3] Textures** = an **effect / particle overlay**, animated; empty for non-animated tiles
+
+Brazier 3633 and torch 6228 share the same `CandleA.tga` overlay — the candle-flame
+texture is reused across tiles that need a similar small flame. `SconceB.tga` is the
+wall-mounted torch flicker.
+
+The `Textures/00000007_CandleA.tga` style is a single sprite image whose **animation
+comes from texture-coordinate scrolling or a flipbook layout**, not from sequential
+file IDs. (The actual sub-frame layout / frame timing for these overlay textures
+is a TODO — search `Texture.uop` for the `Textures/...` namespace path and inspect
+the DDS dimensions vs. the tile's expected frame count.)
+
+**Animation source is NOT the DDS dimensions** (failed hypothesis):
+
+Initially we observed that animated tiles (brazier 128×64, torch 256×64) have
+wider-than-cell DDS textures and hypothesised the DDS was a sprite-sheet. This
+fails on static items with the same shape — `wall 200` LegacyTexture is also
+64×128, but the wall isn't animated. The wider DDS just means the sprite's
+visual content exceeds one 64×64 cell (taller walls, wider braziers).
+
+Animation must come from a different source — probably the `EFFECT00`
+particle records (`.ems` / `.nif`) following the four texture groups (see
+below).
+
+### The `EFFECT00` block after the four texture groups
+
+After the four `TEXTURE()` groups, animated tiles also carry a `C8` count
+followed by `C8` × `EFFECT00` records — EC's particle-emitter list. Brazier
+3633 has 2 effects: `coals01.ems` (glowing coals) and `smoke02.ems` (rising
+smoke). Each record is:
+```
+'EFFECT00' tag    (8 bytes)
+ASCII name        (Pascal-style: u16 length + bytes)
+metadata          (4 u32-ish fields + u8 flags, role TBD)
+```
+These are real EC particle systems — not needed to make tiles *look* animated
+(the DDS sprite-sheet covers the visible flicker), but they explain the extra
+glow / smoke seen in EC. Implementation is optional polish.
+
 ### Constants (read directly from `UOSA.exe`)
 
 | Symbol          | VA          | Value     | Meaning                                |

@@ -321,6 +321,43 @@ which is what ClassicUO already does. (The per-body `interval` float in
 [AnimationDefinition.md](AnimationDefinition.md) only applies to the disjoint
 high-id space, which has no frames anyway.)
 
+## Human body 400 action labels — verified visually
+
+CUO's `PeopleAnimationGroup` enum stops at index 34 (`AnimationCount = 35`),
+but human body 400 has AMOU files for actions **0–42 and 47–51**. The extra
+actions are EC-specific extensions never exposed by CC, and the CUO labels
+for the first 35 don't always match what AMOU actually contains for that
+slot. Identified by dumping `body400_action{NN}_f{0..9}.png` (dir 0) and
+visually inspecting:
+
+| Action | CUO label                  | Visual content (AMOU body 400)        |
+|-------:|----------------------------|---------------------------------------|
+|  4     | Stand                      | unused / mismatched — not real idle   |
+|  5     | Fidget1                    | fidgeting (1)                         |
+|  6     | Fidget2                    | fidgeting (2)                         |
+|  7/8   | StandOneHand/TwoHand       | armed standing                        |
+| 21     | Die1                       | death ✓                               |
+| **35** | —                          | running with dual-hand long pole      |
+| **36** | —                          | dual-hand long pole standing          |
+| **37** | —                          | **true idle / neutral breathing pose** — what real EC plays |
+| **38** | —                          | sit idle                              |
+| **39** | —                          | receiving a blow                      |
+| **40** | —                          | martial-arts blow deflection sideways |
+| **41** | —                          | war-mode fidgeting (standing)         |
+| **42** | —                          | sit fidget                            |
+| **47** | —                          | mounted idle                          |
+| **48** | —                          | mounted blow                          |
+| **49** | —                          | mounted pointing up (celebration?)    |
+| **50** | —                          | mounted fidget                        |
+| **51** | —                          | mounted drinking/eating               |
+
+Actions 43–46 are absent from the AMOU archive.
+
+**Implication for porting**: CC asks for People.Stand=4 for idle, but
+AMOU body 400 action 04 does NOT hold EC's actual idle pose — that's at
+action 37. When EC anim is enabled, remap People.Stand → 37 before the
+AMOU file lookup. (See `MobileAnimation.GetGroupForAnimation` in CUO.)
+
 ## UOReader provenance
 
 UOReader 0.8.7 (2013) by Kons — released on the Mythic-era Ultima Online
