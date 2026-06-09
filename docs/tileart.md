@@ -19,7 +19,13 @@ build/tileart/{id:08}.bin
 
 ## Payload format
 
-Not yet decoded field-by-field. The records are variable-size binary blobs. Plan:
+**Decoded — see [tileart_VERIFIED.md](tileart_VERIFIED.md)** for the field-by-field
+header layout. The trailing `TEXTURES()` block is a `TextureInfo` — the **same
+struct** [`TerrainDefinition.uop`](TerrainDefinition.md) uses: each entry's
+`textureIDX` is an **index into [`string_dictionary.uop`](string_dictionary.md)**
+that resolves to a WorldArt/Legacy filename (the sprite reference is a string-dict
+index, not a direct id). The original pre-decode plan is kept below for history:
+
 1. Sample a handful with known semantics (e.g. id 0 = blank tile, id 0x4000+ = bottom of static range) and dump their bytes.
 2. Cross-reference against the corresponding CC `StaticTile` record to identify common fields.
 3. Run another Ghidra pass keyed on `"AVUOTileArtBinaryFactory"` / `"TileArt"` factory symbols to nail down the C++ struct.

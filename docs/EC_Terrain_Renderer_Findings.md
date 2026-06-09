@@ -18,8 +18,12 @@ Per 32×32-cell chunk, EC draws **one shared 4096-vertex mesh** (4 verts/cell)
   **coverage-mask texture**; `ALPHATESTENABLE=TRUE` discards uncovered pixels →
   the layer is "stamped" only where its mask passes). **This is the splat.**
 
-Each layer's *colour* is a blend of two terrain-atlas textures (world-tiled) via
-a shared detail mask; the per-vertex colour is **lighting**, not splat weight.
+Each layer's *colour* is `lerp(baseAlbedo, partnerAlbedo, blendMask.a)` (two
+**`build/worldart` HD textures** world-tiled, blended by a red mask's alpha) then
+**× the per-vertex colour (lighting)**. The splat weight is the stage-3 coverage
+mask's alpha. **⚠ See [P1 CORRECTION] at the bottom: the albedo is `Texture.uop`
+worldart, NOT `TerrainTexture.uop` atlases — the M3/P1 "atlas" text below is
+superseded.**
 
 ---
 
@@ -37,6 +41,13 @@ per-layer **coverage-mask texture** in stage 3 (below).
 ---
 
 ## M3 — the 4 texture-stage recipe (fixed function)
+
+> **⚠ SUPERSEDED IN PART by [P1 CORRECTION] (bottom of doc).** The stage *ops*
+> here are right, but the **texture identities are wrong**: t0/t2 are
+> `build/worldart` albedo (a base/partner pair), **not** `TerrainTexture.uop`
+> atlases; t1 is a worldart **red blend mask** (alpha only); and stage 3
+> modulates by **vertex DIFFUSE (lighting)** with t3 supplying **alpha only**.
+> The cumulative-state recipe is in the correction.
 
 `SetPixelShader(NULL)` and `SetVertexShader(NULL)` for every terrain draw — pure
 fixed-function multitexture. Per-draw state (from the trace, draw 0 onward):
@@ -233,9 +244,11 @@ dominant blocker (often with `wall`).
 ## Open items for implementation
 1. **M5 constant** — the exact map-Z→world-Y scale (correlate blob Y vs map Z, or
    read the mesh-builder height term).
-2. **`layer_rec_id → (atlas#, sub-rect)`** resolution and **`layer_param`**
-   weight-vs-tiling — read the TerrainDefinition deserializer
-   (`FUN_004cc3f0 → FUN_00a7222c`) and the `TerrainTexture.uop` 38-atlas index.
+2. ~~`layer_rec_id → (atlas#, sub-rect)` resolution~~ — **SOLVED**, see
+   [P1 CORRECTION] Q3: it is `TextureInfo.textureIDX → string_dictionary →
+   "{worldartId}_{Name}.tga"`, fully static. `layer_param` = `repetition` (tiling,
+   scale `1/rep`). Build the lookup at runtime — see [P1 CORRECTION] Q3 "How to
+   pull the textures at runtime".
 3. **t1/t3 mask textures** — where the per-chunk coverage masks (t3) come from
    (generated from the cell terrain-type grid? a per-chunk render target?) — the
    46 distinct t3 textures are created outside the captured frames; capture
@@ -257,7 +270,14 @@ world units** (cells). It is a **tiling/repeat scale**. (The most common tilings
 are `1/4` and `1/16`.) The blend weighting is *not* here — it comes from the
 mask textures (t1 alpha → `BLENDCURRENTALPHA`, t3 alpha → alpha-test; see M3).
 
-### `texMap` = atlas id — confirmed
+### `texMap` = atlas id — ❌ WRONG, see [P1 CORRECTION]
+> **Retracted.** The base ground texture is **not** `build/terraintexture/{texMap}.dds`.
+> `TerrainTexture.uop` atlases are cream gradients and are **not used** in the
+> terrain pass; the albedo is a `build/worldart` (`Texture.uop`) HD texture,
+> resolved **statically** via `TerrainDefinition.TextureInfo → string_dictionary →
+> "{worldartId}_{Name}.tga"` (see [P1 CORRECTION] Q3). The paragraph
+> below is kept only for the archive facts (38 atlases, 256² DXT5).
+
 `TerrainTexture.uop` = **38 atlases, ids `[1..17, 20..40]`, each 256² DXT5**.
 A terrain's **base** texture is `build/terraintexture/{texMap:08}.dds`
 **directly** (grass id 3 → atlas 3; furrows id 10 → atlas 10). **No sub-rect** —
@@ -266,6 +286,13 @@ the texture matrices are scale-only `diag(s, -s, 1)` (note V flipped) with
 terrainType id; see M7 chain.)
 
 ### The layer list = the terrain's TEXTURE STACK
+> **⚠ "atlas" identities below are SUPERSEDED by [P1 CORRECTION].** The stage
+> *structure* (4 disjoint sets, base/partner/mask/coverage) is correct, but
+> t0/t1/t2 are `build/worldart` textures, not `TerrainTexture.uop` atlases, and
+> the "layer `rec_id`s" are actually `TextureInfo.textureIDX` string-dictionary
+> indices (→ `"{worldartId}_{Name}.tga"`). Read the structure here, the
+> identities + the static chain in the correction (Q3).
+
 The trace shows **four disjoint texture sets** per chunk (0 overlap between
 them): stage0 = **11 base atlases** (t0), stage2 = **11 *different* detail/
 variation atlases** (t2), stage1 = **2 global detail masks** (t1, its alpha is
@@ -285,7 +312,18 @@ Worked examples (verified record bytes):
   N=3 params 4/4/16, shared `0x1d2ab` mask.
 - **furrows** texMap 10 → atlas 10; rec_id `0x38b5`, N=4, params 12/4/6/8.
 
-### Still not fully pinned — `layer_rec_id → atlas` for the non-base entries
+### Still not fully pinned — `layer_rec_id → atlas` ✅ NOW SOLVED (see [P1 CORRECTION] Q3)
+> **Solved & retracted.** The "`layer_rec_id`s in the 119xxx space" are
+> `TextureInfo.textureIDX` **string-dictionary indices**, not resource-cache
+> sub-resource ids. They resolve **statically**: `values[textureIDX]` =
+> `"{worldartId:08x}_{Name}.tga"` in `string_dictionary.uop`. The worked examples
+> below labelled these as "atlas N / params / seq" — corrected meanings:
+> `{textureIDX, repetition, textureSlot}`, resolving to WorldArt files. The layer
+> object type *is* chosen by the `shaderNameIDX` string (`FUN_00461790`:
+> `UODefaultTerrainLayer` / `UOWaterTerrainLayer` / `UOBumpMapTerrainLayer`) — that
+> part was right. The original (partly mislabelled) notes are kept below for the
+> byte-structure record only.
+
 The base resolves cleanly (`record.rec_id@0 → record.index@4 = texMap → atlas`).
 The **other layer entries** reference textures by `layer_rec_id` in the internal
 119xxx id space (usually `rec_id+1, +2`, plus the shared mask id). These are
@@ -336,3 +374,490 @@ bias term beyond raw elevation. **Open:** read the precompute function's height
 term, or correlate the blob against the correct facet/region's per-cell z (the
 facet sector z-bytes are decoded — see Facets.md — so this is a tractable
 follow-up once the blob's facet is identified).
+
+---
+
+# P1 CORRECTION — the ground albedo is `Texture.uop` worldart, NOT `TerrainTexture.uop`
+
+> **This section supersedes the earlier claims** "texMap = atlas id", "t0/t2 are
+> `TerrainTexture.uop` atlas slices", and "t1 is a global detail mask from
+> `TerrainTexture.uop`". Those were inferred from texture *format/count* without
+> decoding the actual bound pixels. **Decoding the real pixels (apitrace
+> `--blobs` + manual BC1/BC3 decode) and byte-matching them to the archives
+> proves the terrain textures come from `Texture.uop` (`build/worldart`), and
+> that `TerrainTexture.uop`'s 38 atlases are not used in the base terrain pass at
+> all.** Method: extracted every `memcpy` fill blob in the texture-upload batch
+> (calls 768979–770800 of `UOSA.trace`), BC-decoded them, and `==`-compared the
+> raw DXT payloads against `TerrainTexture.uop`, `Texture.uop`. Verified.
+
+## Q1 — all 38 `TerrainTexture.uop` atlases are detail/glow/mask, none are albedo
+Dumped every atlas (ids `[1..17, 20..40]`, 256² DXT5) to PNG. **All 38 are faint
+cream/tan radial gradients, glows, and soft brush blobs, mostly transparent
+(opaque coverage ≈1–20 %; only ids 20/21/22 and 30/31 are fully opaque and those
+are dark noise / flat yellow).** None is a recognisable grass/stone/sand ground
+texture. **Byte-check:** none of the 38 atlas payloads equals *any* texture bound
+in the terrain draws. So `TerrainTexture.uop` plays **no role in the base terrain
+color** in the captured scene (it is likely a separate effect/transition/“classic
+terrain” set). `atlas[texMap]` being a cream gradient is therefore expected — it
+was never the albedo.
+
+## Q2 (THE UNBLOCKER) — the ground color comes from `build/worldart` (`Texture.uop`)
+The textures bound in the actual terrain `DrawIndexedPrimitive`s decode to
+**recognisable grass/earth albedo** and **byte-exact-match `Texture.uop`
+entries**. For the first terrain chunk (VB `0x1eafd9e0`, draw @ call 770855):
+
+| stage | trace ptr | dims/fmt | decoded content | **source (`build/worldart/…`)** | role |
+|------:|-----------|----------|-----------------|----------------------------------|------|
+| 0 (t0)| `0x1d807ae0` | 256² DXT5 | green grass | **`02000011.dds`** | **base albedo** → TEMP |
+| 1 (t1)| `0x1d476a80` | 256² DXT5 | **red mask** | **`01000003.dds`** | blend mask (its **alpha** = lerp weight) |
+| 2 (t2)| `0x1d806620` | 512² DXT5 | green grass | **`02000010.dds`** | **partner albedo** (blended in) |
+| 3 (t3)| `0x20bca720` | (mask) | coverage | runtime per-chunk | splat coverage (its **alpha**) |
+
+> **If you implement one thing:** for this grass chunk the visible ground color =
+> `lerp(worldart 0x02000011, worldart 0x02000010, worldart 0x01000003 .alpha)`.
+> **All three live in `Texture.uop`, none in `TerrainTexture.uop`.**
+
+Across the whole startup texture batch, **78 of the bound terrain textures
+byte-matched `Texture.uop`** (0 matched `TerrainTexture.uop`). The worldart ids
+used fall in three id bands:
+
+- **`0x01xxxxxx`** — `_noise`/`_alpha`/`cube` **masks & cubemaps** (e.g. `01000003_noise_alpha`, `01000004_noise_alpha_sharp`, `01000013_water_alpha`, `01000014_cube0`, `01000017_cube3`); the blend mask's **alpha** is consumed at stage 1.
+- **`0x02xxxxxx`** — terrain **albedo**, in **`_A`/`_B` pairs** per material (e.g. `02000010_Grass_C`/`02000011_Grass_B`, `02000070_Sand_A`/`02000071_Sand_B`): the **even** id (`_A`/`_C`) = 512² partner → stage 2; the **odd** id (`_B`) = 256² base → stage 0. The id is just the asset's own WorldArt id — **the 8-hex prefix of its `_Name.tga`** (see Q3); it is looked up by *name via the string dictionary*, not computed.
+- **`0x03xxxxxx`** — additional WorldArt assets (some materials’ extra slot-4 overlays).
+
+`worldart_id` is **not** `0x02000000 | legacyLandId` (tested: grass land `0x03–0x06`
+and the CC sand land `0x0436` are all **absent**) — it is simply the WorldArt
+asset id (filename prefix) that the `TerrainDefinition` record names through the
+string dictionary. **Q3 below gives the exact, fully-static mapping + the complete
+212-row table.**
+
+## Q3 — terrain-type → worldart id is **FULLY STATIC** (string dictionary) ✅ SOLVED
+
+> **This supersedes the earlier "runtime resource cache" guess in this section.**
+> The mapping is 100 % recoverable from the `.uop` files — no client run needed.
+> The `TerrainDefinition` record itself carries the texture references, as a
+> `TextureInfo` block whose `textureIDX` is an **index into `string_dictionary.uop`**;
+> the indexed string is the WorldArt filename, and **the worldart id is that
+> filename's 8-hex-digit prefix**. Confirmed three ways: (a) it reproduces the
+> exact textures the D3D trace bound for the grass chunk, (b) the shader-name
+> field resolves to the three Ghidra layer classes, (c) the WorldArt path form
+> matches the disassembly (`FUN_004604a0` builds `Data\WorldArt\…`; `FUN_004cb850`
+> hard-codes `Data\WorldArt\01000045_noise.tga`).
+
+**What I mis-parsed in M1/P1:** the `TerrainDefinition` "layer list" *is* the
+`TextureInfo.texturesArray`. The fields I called `{layer_rec_id, layer_param,
+seq_index}` are actually `{textureIDX (string-dict index), repetition (tiling),
+textureSlot}`. They are **not** Gamebryo resource ids.
+
+### The full resolution chain (for the coder)
+```
+facet cell  ──►  landtileGraphic (legacy land-tile id)            [facetN.uop, see Facets.md]
+            ──►  legacyterrainmap.csv : legacyId → (newId, newSub) [GameData.uop / shipped csv]
+            ──►  TerrainDefinition[newId]                          [TerrainDefinition.uop, record index = newId = "texMap"]
+                   .shaderNameIDX  → stringDict → "UODefaultTerrainLayer" | "UOWaterTerrainLayer" | "UOBumpMapTerrainLayer"
+                   .texturesArray[] each:
+                       textureIDX  → stringDict → "{worldartId:08x}_{Name}.tga"   (worldart id = the 8-hex prefix)
+                       repetition  → texture tiling (texcoord scale = 1 / repetition)
+                       textureSlot → role (see slot map below)
+            ──►  worldart id  → build/worldart/{id:08x}.dds        [Texture.uop]  ← the actual albedo/mask/cube DDS
+```
+
+### Binary formats (confirmed vs UOReader structs + raw bytes + Ghidra)
+**`string_dictionary.uop`** (1 entry, `build/stringdictionary/string_dictionary.bin`):
+```
+u64 unk; u32 count; i16 unk;   then count × { u16 len; char[len] }   // values[] indexed sequentially
+```
+`textureIDX` / `shaderNameIDX` / `nameIDX` are **indices into `values[]`** (not byte offsets).
+
+**`TerrainDefinition.uop`** record `build/terraindefinition/{N}.bin` (N = record index = texMap/newId):
+```
+u32 nameIDX;  u32 index(=N);  u32 _u3; u32 _u4; u32 _u5;
+u32 aliasCount;  aliasCount × { u32 countIndex; u32 oldAlias; u64 flags }   // 16 B each
+TextureInfo textures;                                                       // ← the texture stack
+```
+**`TextureInfo`** (same struct used by `tileart.uop`):
+```
+u8 texturePresent;  if 0 → end.
+u8 unk;  i32 shaderNameIDX;  u8 texturesCount;
+texturesCount × { u32 textureIDX; u8 unk; f32 repetition; i32 textureSlot; i32 unk }   // 17 B each
+u32 count2; count2 × i32;   u32 count3; count3 × f32;     // usually 0
+```
+
+### Worked example — grass (matches the trace byte-for-byte)
+`TerrainDefinition[1]` `name="grass"` `shader="UODefaultTerrainLayer"`:
+| slot | textureIDX | string (WorldArt file) | worldart id | repetition | D3D stage it feeds |
+|----:|-----------|------------------------|-------------|-----------:|--------------------|
+| 0 | `0x1d3c8`* | `02000010_Grass_C.tga` | `0x02000010` (512²) | 10 | **stage 2** (partner, scale 1/10) |
+| 1 | `0x1d3c9`* | `02000011_Grass_B.tga` | `0x02000011` (256²) |  4 | **stage 0** (base → TEMP, scale 1/4) |
+| 2 | `0x1d2ab`  | `01000003_noise_alpha.tga` | `0x01000003` |  32 | **stage 1** (blend mask alpha, scale 1/32) |
+
+The trace's grass chunk bound `t0=0x02000011`(1/4), `t2=0x02000010`(1/10),
+`t1=0x01000003`(1/32) — identical. (*indices shown illustratively; read them from the record.)
+
+### Slot → stage role (by shader class)
+- **`UODefaultTerrainLayer`** (203/212): slot0 = `_A`/`_C` partner → **stage 2**; slot1 = `_B` base → **stage 0 (TEMP)**; slot2 = `noise_alpha` blend mask → **stage 1** (alpha = lerp weight). (Some records add slot4 = an extra detail/overlay.)
+- **`UOWaterTerrainLayer`** (8/212, e.g. water/lava): slot0 = `*_alpha` mask, slot1 = diffuse (`water`/`Lava_A`), slot2 = `cube3` (reflection cubemap). Animated/scrolled.
+- **`UOBumpMapTerrainLayer`** (1/212, snow): the default 3 **plus** slot3 = `water_alpha`, slot4 = `cube0` (normal/bump map).
+
+### How to pull the textures at runtime (do this — no pre-generated table)
+Everything is computed from shipped uops at load time. **No CSV, no client dump.**
+There are **212** terrain records; e.g. sand = texMap 7 → `Sand_A` `0x02000070` +
+`Sand_B` `0x02000071` + `noise_alpha`. `TerrainTexture.uop`'s 38 gradient atlases
+are **not referenced by any record** — ignore them for terrain.
+
+**Step 0 — load the string table once** (from `string_dictionary.uop`, single entry):
+```
+read: u64 _, u32 count, i16 _
+values = []; repeat count times: { u16 len; values.add(ascii(read len bytes)) }
+```
+
+**Step 1 — build texMap → textures, once at startup** (from `TerrainDefinition.uop`,
+record file `build/terraindefinition/{N}.bin`, where N = the record index = texMap):
+```
+parseTerrainDef(bytes b):
+    u32 nameIDX; u32 index(=texMap); u32 _u3,_u4,_u5
+    u32 aliasCount; skip aliasCount * 16 bytes          // alias = {u32,u32,u64}
+    // ---- TextureInfo ----
+    u8 present; if present==0: return (no textures)
+    u8 _unk1; i32 shaderNameIDX; u8 texCount
+    layers = []
+    repeat texCount:
+        u32 textureIDX; u8 _unk; f32 repetition; i32 slot; i32 _unk
+        string file = values[textureIDX]                // e.g. "02000011_Grass_B.tga"
+        uint worldartId = hexPrefix8(file)              // 0x02000011  (first 8 hex chars)
+        layers.add({ worldartId, repetition, slot })
+    shader = values[shaderNameIDX]                       // "UODefaultTerrainLayer" | "UOWaterTerrainLayer" | "UOBumpMapTerrainLayer"
+    return { texMap=index, shader, layers }
+```
+
+**Step 2 — map a facet cell → texMap** (see M6/M7): `landtileGraphic` →
+`legacyterrainmap.csv` (in `GameData.uop`) → `newId` = the record index used in Step 1.
+
+**Step 3 — bind by slot/shader role** (see the slot map above + Q4 recipe). For
+`UODefaultTerrainLayer`: base = slot1 (`_B`), partner = slot0 (`_A`/`_C`), mask =
+slot2 (`noise_alpha`); texcoord scale = `1 / repetition`.
+
+**Step 4 — fetch each pixel source** from `Texture.uop`:
+`worldartId → build/worldart/{worldartId:08x}.dds` (DXT1/DXT5; DXT1 = opaque
+albedo, DXT5 mask carries the alpha). Decode and sample per the Q4 composition.
+
+> This is exactly what the EC client does (`FUN_00461790` dispatches on the
+> `shaderName` string; `FUN_004604a0` opens `Data\WorldArt\{id}…`) and what the
+> working Unity prototype does (`UOResourceManager.getTerrainDefinition` +
+> `getStringDictValue` + `TextureInfo`). Re-derive the lookup at load — it stays
+> correct across game patches, where a snapshot file would go stale.
+
+## Q4 — corrected per-pixel composition (full fixed-function state)
+The earlier M3 recipe was wrong because the **lastframes trace only shows
+per-draw state *deltas***; the args that wire `TEMP` and `DIFFUSE` into the blend
+are set **once at init** (before the trim) and were invisible. Reconstructing the
+**cumulative** stage state from call 1 of the full `UOSA.trace` gives the real
+config:
+
+```
+Stage0  COLOROP=SELECTARG1  COLORARG1=TEXTURE(t0)  RESULTARG=TEMP   ALPHAOP=DISABLE
+Stage1  COLOROP=SELECTARG1  COLORARG1=CURRENT      (rgb passthrough)
+        ALPHAOP=SELECTARG1  ALPHAARG1=TEXTURE(t1)                   → CURRENT.a = mask.a
+Stage2  COLOROP=BLENDCURRENTALPHA  COLORARG1=TEXTURE(t2)  COLORARG2=TEMP(t0)
+Stage3  COLOROP=MODULATE    COLORARG1=CURRENT      COLORARG2=DIFFUSE
+        ALPHAOP=SELECTARG1  ALPHAARG1=TEXTURE(t3)   TEXCOORDINDEX=1 (chunk UV)
+RS: LIGHTING=FALSE  COLORVERTEX=TRUE  ALPHATESTENABLE=TRUE (ref 0, GREATER)
+    ALPHABLENDENABLE=TRUE  SRCBLEND=SRCALPHA  DESTBLEND=INVSRCALPHA  ZWRITE=TRUE
+```
+
+Resolving the register flow (`TEMP` is consumed by **stage 2 `COLORARG2`**, and
+the vertex color enters at **stage 3 `COLORARG2=DIFFUSE`**):
+
+```
+TEMP        = tex(base256 , worldUV / p0).rgb           // worldart 0x02..(odd)  albedo, tiles every p0 cells
+CURRENT.a   = tex(mask    , worldUV / p1).a             // worldart 0x01..       red mask alpha = blend weight
+CURRENT.rgb = lerp( TEMP , tex(part512, worldUV/p2).rgb , CURRENT.a )   // blend base↔partner albedo
+out.rgb     = CURRENT.rgb * vertexColor.rgb             // × per-vertex lighting (DIFFUSE)
+out.a       = (layer==0) ? 1.0 : tex(coverage, chunkUV).a               // splat coverage
+```
+
+then **alpha-blend** (`SRCALPHA/INVSRCALPHA`) with alpha-test discarding only
+`a==0`. Tilings observed for the grass chunk: `p0≈4` (base), `p1≈32` (mask),
+`p2≈10` (partner) — these are the `1/layer_param` scales from P1.
+
+> **Note for the coder:** `mask`, `base256`, `part512` above are exactly the
+> `TerrainDefinition[texMap]` `TextureInfo` slots resolved through the string
+> dictionary (Q3): `base` = slot1 `_B`, `partner` = slot0 `_A`/`_C`, `mask` =
+> slot2 `noise_alpha`; `p0/p1/p2` = each entry's `repetition`. Read them at load
+> from `TerrainDefinition.uop` + `string_dictionary.uop` (Q3 "How to pull the
+> textures at runtime") — no trace, no CSV needed.
+
+**Net corrections to earlier sections:**
+- **t0/t2 are worldart albedo (a base/partner pair), not `TerrainTexture` atlases.**
+- **t1 is a worldart `noise_alpha` blend-mask; only its alpha is used (lerp weight), not a “detail color”.**
+- **Stage 3 modulates by the per-vertex DIFFUSE color (lighting); the stage-3 texture (t3) contributes alpha only (coverage), not color.** (M2’s "vertex color = lighting" is confirmed — and it is what tints the final pixel.)
+- **`TerrainTexture.uop` is not the terrain albedo source; `Texture.uop`/`build/worldart` is.**
+- **The texMap→texture mapping is fully static** (`TerrainDefinition.TextureInfo
+  → string_dictionary → WorldArt filename); no runtime/resource-cache dump needed.
+
+## Reproduction artifacts
+- The `texMap → {shader, slot, repetition, worldart_id}` lookup is **built at
+  runtime** from `TerrainDefinition.uop` + `string_dictionary.uop` — see Q3 "How
+  to pull the textures at runtime". (No file is shipped; re-derive it at load so
+  it tracks game patches.)
+- `tools/ec_research/out/terraintexture_contact.png` — all 38 atlases (Q1).
+- `tools/ec_research/out/terrain_textures_decoded.png` — decoded real terrain textures (grass + red mask).
+- Blob→worldart match + BC1/BC3 decoder: ad-hoc scripts over `UOSA.trace` blobs
+  (`apitrace dump --blobs`), byte-compared to `Texture.uop`/`TerrainTexture.uop`;
+  hash→name via UOReader `Dictionary.dic`.
+
+---
+
+# TRANSITION BLEND — decoded
+
+> ## ⚠ CORRECTION (2026-06 — verified against the RAW decompiles of `FUN_00461110` + `FUN_004618b0`)
+> The original A–D text below (written before `FUN_00461110` was exported)
+> claimed the feather is **gated per-edge by the facet delimiter** (`self ==
+> neighbourRing[dir]`). **That is WRONG.** Reading the actual `FUN_00461110.c`
+> (now in `ec_dbg/ghidra/`):
+>
+> 1. **Feather gating is PER-LAYER, not per-edge.** `FUN_00461110`'s `param_3`
+>    (featherStrength) comes from the layer's blend scalar (`FUN_004618b0` line
+>    58: `if ((float)param_1[0xe] == 0.0)` → opaque, else feathered). A terrain
+>    type *either* feathers into everything *or* doesn't. There is **no per-edge
+>    delimiter test** anywhere in the interior.
+> 2. **The feather dilates the layer's terrain ONE cell into ALL adjacent
+>    non-member cells** — pure membership adjacency (`FUN_00461110` pass-2 lines
+>    131–158: a `cVar2==0` texel horizontally/vertically-between or diagonally-
+>    contacting a `255` member gets the random feather alpha). It is NOT limited
+>    to delimiter-authored edges.
+> 3. **The 8-neighbour ring slots (`+0x24…+0x44`) are read ONLY at chunk
+>    borders** (`FUN_00461110` pass-1 lines 43–86: the `iVar7==0/0x1f` and
+>    `iVar3==0/0x1f` branches) to clip membership so a terrain only feathers
+>    across a chunk seam where the adjacent chunk also has it. Interior cells use
+>    `bVar8 = self-only` (`LAB_00461224`). The ring is **chunk-seam membership
+>    clipping, not interior feather gating.**
+> 4. **The layer key (`cell.self` at `+0x18`) is the BYTE terrain-TYPE id**
+>    (the TerrainDefinition record index / "newId"; `FUN_00461bc0` line 160 reads
+>    a byte). So every CC graphic that maps to the same newId is ONE layer — all
+>    grass variants merge, no spurious internal boundaries.
+> 5. The random feather alpha is `round(rand()*255)` — **`local_410`/`local_414`,
+>    ONE pair of values per mask** (`FUN_00461110` lines 113–116), reused for the
+>    whole ring; bilinear filtering of the 32×32 (1 texel/cell) texture turns the
+>    1-cell ring into the soft edge.
+>
+> **Consequence for the port:** "crisp vs blend" is decided by the per-terrain
+> blend scalar (≈ a blendable flag: grass/dirt/sand feather, brick/stone/pavers
+> don't — `param_1[0xe]==0`), NOT by per-edge delimiters. Key layers by newId.
+> The grass↔dirt softness is the per-layer 1-cell dilation × bilinear. The
+> sections below (A "delimiters", §3 of "WRONG") describe the delimiter theory
+> that the raw code does not support — kept for history but superseded by this box.
+
+> **This section answers A–D (selection / coverage geometry / draw-state /
+> delimiter direction) by decoding the actual functions, superseding the "P2
+> strong inference".** The cross-terrain transition is NOT extra edge geometry
+> and NOT per-vertex alpha. It is the **per-layer t3 coverage mask**, generated
+> on the CPU in `FUN_00461110` from the per-cell terrain grid + an 8-neighbour
+> ring (the expanded facet delimiters), with a 1-pixel feathered (randomised)
+> border. Evidence is cited by function offset and the relevant decompiled
+> lines. Source files: `ec_dbg/ghidra/FUN_00461bc0.c`, `FUN_00461790.c`,
+> `FUN_004604a0.c`; pulled callees `FUN_004618b0`, `FUN_00461110`, `FUN_0043b3c0`,
+> `FUN_0043b2e0`, `FUN_00460d20`, `FUN_00691d20`, `FUN_0068fc00`.
+
+## Overview — one mesh, N layer-draws, coverage decided by the mask (not geometry)
+
+The whole chunk is **one shared 32×32-cell vertex mesh** built once
+(`FUN_00461bc0`, the `do…while (piStack_14c < 0x20)` double loop, lines
+155–285). There is **no per-edge / per-delimiter geometry** anywhere — the loop
+emits exactly 4 corner verts per cell and never branches on a neighbour. The
+mesh is then drawn **once per terrain layer present in the chunk**. Each draw's
+*spatial coverage* is supplied entirely by that layer's **t3 coverage mask**
+(stage 3 alpha), which is a 32×32 RGBA texture baked per (chunk, layer) by
+`FUN_00461110`. So: **selection + coverage live in the mask, not in geometry or
+vertex color.** (Vertex `D3DCOLOR` is lighting only — confirmed: `FUN_00460d20`
+computes it from per-corner heights × `0.12856454` cross-products = a normal/
+shade, see M2.)
+
+The per-chunk layer set is the std::map/list walked at
+`param_1[5]+0x1600c` (FUN_00461bc0 lines 111–151 collect it; lines 407–538
+re-walk it to attach one `UOTerrainTexturingProperty` per layer). For each
+layer, `FUN_004618b0` is called (line 463) which (a) instantiates the layer's
+shader object via `FUN_00461790` (`UODefaultTerrainLayer`/`UOWaterTerrainLayer`/
+`UOBumpMapTerrainLayer`) and (b) **calls `FUN_00461110` (at `0x461936`) to bake
+that layer's coverage mask.**
+
+## A. Transition SELECTION — per-cell terrain id + 8-neighbour ring (the delimiters)
+
+**Each cell carries its own terrain id AND a fixed 8-slot neighbour-terrain
+ring** in an 88-byte (`0x58`) per-cell record. The facet's *variable* delimiter
+list (`{direction, z, graphic}` per Facets.md) is **expanded at sector-load into
+this fixed 8-neighbour table** so the renderer can test any compass direction in
+O(1). Field map within the cell record (base = cell index × `0x58`, `+8` header;
+proven by which offset `FUN_00461110` tests at each chunk boundary, and matched
+by the elevation reader `FUN_00460d20` which walks the same `0x58` stride):
+
+| offset | meaning | offset | meaning |
+|-------:|---------|-------:|---------|
+| `+0x18` | **self** terrain id (the layer key) | `+0x30` | **W** neighbour |
+| `+0x24` | NW neighbour | `+0x38` | **E** neighbour |
+| `+0x28` | **N** neighbour | `+0x3c` | SW neighbour |
+| `+0x2c` | NE neighbour | `+0x40` | **S** neighbour |
+|         |             | `+0x44` | SE neighbour |
+
+(self at `+0x18` sits between W `+0x30` and E `+0x38` = the centre of a 3×3 ring
+with the corners/edges at the 8 slots above.) Each slot holds the *terrain id of
+the neighbour in that direction* — i.e. the delimiter's resolved terrain, or the
+cell's own id where no delimiter exists.
+
+**The blend test is pure equality:** a layer covers a cell iff that cell's
+`+0x18 == layerId` (the membership), and the **feather into a neighbour cell is
+allowed only where the neighbour's ring slot in that direction `== layerId`**
+(FUN_00461110 boundary tests below). So *whether two terrains blend* is decided
+by **`selfId == neighbourId` comparisons against the delimiter-expanded ring** —
+NOT by a typeFlag and NOT by the shader class. Crisp boundaries (brick↔stone)
+simply have **no delimiter** linking them, so the neighbour ring slot ≠ the other
+terrain's id and the feather is suppressed (the mask stays a hard cell edge).
+
+> Mechanism of "crisp vs blend": EC's facet authoring decides it. If the sector
+> data emits a delimiter for that edge (neighbour graphic recorded in the ring),
+> the mask feathers across; if not, the mask is a hard diamond edge. Brick/pavers
+> are authored without grass/stone delimiters → crisp.
+
+The layer object itself is fetched per terrain id from a red-black tree
+(`FUN_0043b3c0` / `FUN_0043b2e0` = std::map lower-bound lookups keyed by the
+terrain id `*param_2`); `FUN_00461bc0` line 163 `if (*piVar7 == puStack_144)`
+gates whether a cell contributes verts to the *current* layer draw — i.e. the
+membership half of selection happens at mesh-build time, the feather half at
+mask-bake time.
+
+## B. COVERAGE GEOMETRY — it is a 32×32 RGBA mask, CPU-baked, 1px feathered
+
+`FUN_00461110(param_1=out, param_2=cellGridBase, param_3=featherStrength)`
+builds the mask in two passes:
+
+**Pass 1 — membership grid** (`local_408[0x400]` = a 32×32 byte grid). For each
+cell `(iVar7=row, iVar3=col)`:
+```
+bVar8 = (cell[+0x18] == layerId);            // self membership
+if (param_3 > 0) bVar8 &= neighbourTest;     // edge/corner: require the ring slot == layerId
+```
+`neighbourTest` selects the ring slot by which chunk edge the cell is on:
+- top row (`iVar7==0`): inner→`+0x28`(N); corners also require `+0x24/+0x2c` etc.
+- bottom row (`iVar7==0x1f`): `+0x40`(S) (+ `+0x3c/+0x44` at corners)
+- left col (`iVar3==0`): `+0x30`(W); right col (`iVar3==0x1f`): `+0x38`(E)
+- interior cells: `bVar8 = self only` (goto LAB_00461224, no neighbour test).
+
+So **at chunk borders the membership is clipped to where the adjacent chunk also
+has this terrain** (prevents double-feather across chunk seams). If
+`param_3 <= 0` (feather disabled) it is pure self-membership.
+
+**Pass 2 — rasterise + feather to the 32×32 texture** (the nested
+`do…while(iVar3<0x400)` loop). For each texel it writes **all 4 RGBA bytes = the
+same coverage value** `cVar2` (so the texture is RGBA8, alpha == rgb == coverage;
+`FUN_00691d20(...,0x20,0x20,&DAT_00de4570,1,1)` = 32×32, then
+`FUN_0068fc00` wraps it as a `NiSourceTexture`). The value is:
+```
+cVar2 = (membership[i] != 0) ? 0xFF : 0;                 // solid interior / exterior
+// feather: a cell that is NOT a member but is 4-adjacent (and/or diagonally) to
+// members gets an INTERMEDIATE value instead of 0:
+if (cVar2==0 && <horizontally between two members OR vertically between two members
+                 OR a diagonal-only contact>) cVar2 = local_410;   // = feather alpha
+// and a member cell touching the grid edge can be pulled to local_414 (border alpha)
+```
+where **`local_410` and `local_414` are RANDOMISED per-mask feather alphas**:
+when `param_3 > 0` they are `round( rand() * 255 )` (`FUN_00bdbbf0` = the FP RNG,
+× 255.0 — lines `local_410 = round(rand*255); local_414 = round(rand*255)`).
+When `param_3 <= 0` they are 0 (no feather).
+
+**Net: the feather is exactly ONE pixel wide** (one cell ring around the
+membership), with a **randomised partial alpha** rather than a fixed ramp — this
+is what gives the EC transition its soft, slightly noisy edge. There is **no
+multi-pixel gradient and no distance field**; the smoothness you see is *1-cell
+feather × bilinear texture filtering* (the mask is sampled at chunk-UV 0..1 over
+32 cells, so each of the 32×32 texels stretches across one whole cell and
+bilinear interpolation ramps the alpha smoothly between the 0 / feather / 255
+texels).
+
+`param_3` (featherStrength) comes from the layer: in `FUN_004618b0` the
+branch `if ((float)param_1[0xe] == 0.0)` (the layer's blend/`global_param`
+scalar, see M1 `global_param`) selects opaque-vs-feathered; that same scalar is
+passed as `FUN_00461110`'s `param_3`. **Layer 0 / param==0 ⇒ no feather (opaque
+base); overlay layers with a non-zero blend param ⇒ feathered mask.**
+
+## C. LAYER DRAW ORDER & BLEND STATE (confirmed vs trace, Q4)
+
+- **Draw order = the layer list order** (the std::map walk; base/most-common
+  terrain first, overlays after). Painter's order, all at equal Z.
+- **Per-cell membership** (mesh verts emitted only for `cell.self==layerId`,
+  FUN_00461bc0 L163) means each layer only rasterises its own cells + the
+  feathered border the mask adds.
+- **Blend state** (from the cumulative state, Q4): `ALPHABLENDENABLE=TRUE`,
+  `SRCBLEND=SRCALPHA`, `DESTBLEND=INVSRCALPHA`, `ALPHATESTENABLE=TRUE` (ref 0,
+  GREATER — discards only `a==0`), `ZWRITE=TRUE`, `ZENABLE` on, `LIGHTING=FALSE`.
+- **Stage-3 alpha source:** layer 0 = `D3DTA_DIFFUSE` (vertex a=1 ⇒ opaque base);
+  overlays = `D3DTA_TEXTURE` = the t3 mask alpha. So overlays are
+  **alpha-BLENDED** by the mask's feathered alpha (not merely alpha-tested) —
+  the alpha-test only kills fully-uncovered texels. This is the corrected M3:
+  earlier "alpha-test stamping, blend off" was from the trimmed trace; the full
+  trace shows blend ON. The 1px feather alpha therefore composites smoothly.
+- **NiAlphaProperty** is attached to the TriShape (`FUN_00461bc0` lines 561–566
+  set `NiAlphaProperty::vftable` with flag word `…|0x12ed`), confirming the
+  terrain mesh carries an alpha-blend+alpha-test property, consistent with the
+  above.
+
+## D. DELIMITER DIRECTION ENCODING
+
+From the ring-slot offsets `FUN_00461110` tests at each chunk edge, the facet
+delimiter `direction` byte (which the loader expands into the `+0x24…+0x44` ring)
+maps to the 8 iso neighbours as: **N=`+0x28`, S=`+0x40`, W=`+0x30`, E=`+0x38`,
+NW=`+0x24`, NE=`+0x2c`, SW=`+0x3c`, SE=`+0x44`** (in struct order
+NW,N,NE,W,[self],E,SW,S,SE = the natural row-major 3×3 ring, self omitted). The
+4 cardinal directions are the primary edge-transition markers; the diagonals are
+used at chunk corners and for the diagonal-only feather-contact case in pass 2.
+(The raw on-disk `direction` byte's 0/1/2/3 → which cardinal is the one residual
+unknown — read the sector-loader's delimiter-expansion switch to pin it; the
+*ring* offsets above are what the renderer consumes and are certain.)
+
+## What your current approach gets WRONG vs the real client
+
+Your approach: opaque self-diamond + per-edge OVERLAY diamonds of the neighbour
+terrain, per-corner alpha = fraction-of-4-touching-cells, normal-blended. The
+real EC differs in **four** ways:
+
+1. **Coverage source is a baked 32×32 per-(chunk,layer) RGBA mask, not extra
+   overlay diamonds.** EC draws *the layer's own terrain* (not the neighbour's)
+   wherever the mask alpha > 0, and the mask's feather **pulls that layer's
+   texture OUT past its cells by exactly one cell**, with bilinear filtering
+   ramping it. You are drawing the *neighbour's* terrain inward; EC draws *each
+   layer outward* and lets the lower layers show through the feather. Visually
+   that is "each terrain dilates ~1 cell into its neighbours and they cross-fade",
+   not "neighbour bleeds in along the edge".
+2. **Feather is 1 cell wide with a RANDOMISED alpha** (`round(rand()*255)`),
+   then **bilinear-smoothed** — not a deterministic corner-fraction. Your
+   per-corner fraction gives a clean linear ramp; EC's is a noisy 1-px ring that
+   reads softer because of the bilinear stretch (1 texel ≈ 1 cell). To match:
+   bake a per-chunk A8/RGBA mask at cell resolution = {255 inside, 0 outside,
+   random∈(0,255) on the 1-cell border ring where the neighbour-ring slot ==
+   this layer}, sample bilinear at chunk-UV.
+3. **Selection is `self==neighbourRing[dir]` equality**, gated by whether the
+   facet emitted a delimiter for that edge — so non-delimited edges (brick↔stone)
+   produce **no feather ring at all** (hard mask edge). Your "in the delimiter
+   list AND terrain differs" is close, but you must suppress the feather (not
+   just skip the overlay) and you must use the **expanded 8-ring** including
+   diagonals for corners.
+4. **Composite is the per-layer mesh re-drawn with SRCALPHA/INVSRCALPHA blend +
+   alpha-test ref0**, painter-ordered by the layer list, equal Z, ZWRITE on — and
+   the per-pixel color is `lerp(baseAlbedo, partnerAlbedo, noiseMask.a) ×
+   vertexLight` (Q4), THEN masked by the coverage alpha. You should drive the
+   transition with the coverage alpha in the blend, with the albedo lerp/light
+   unchanged per layer.
+
+### Minimal implementation recipe
+Per chunk, per terrain layer L present:
+1. Build a 32×32 coverage byte grid: `cov[c] = (cell.self==L) ? 255 : 0`.
+2. If L's blend param > 0, **feather**: for every `cov[c]==0` cell that is
+   4-adjacent to a `255` cell **and** whose ring slot toward that member ==
+   L (i.e. a delimiter authorised the blend), set `cov[c] = rand()∈1..255`
+   (one random value per mask is what EC does; a fixed ~128, or a small
+   per-texel random, both approximate it). Clip the ring at chunk borders to
+   where the neighbour chunk also has L (pass-1 boundary tests).
+3. Upload as a 32×32 texture (alpha = cov), sample **bilinear** at chunk-UV.
+4. Draw the shared chunk mesh with this layer's albedo (`lerp(base,partner,
+   noise.a)×vertexLight`), `out.a = (L==base)?1:cov.a`, blend
+   SRCALPHA/INVSRCALPHA, alpha-test GREATER ref 0, ZWRITE on, painter order.
+No per-edge geometry, no neighbour-terrain overlays.

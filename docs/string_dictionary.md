@@ -3,8 +3,15 @@
 **Internal registry slot:** `UOStringDictionary` (the EC global string table).
 
 A single flat table of ASCII strings that many other archives reference **by
-byte offset** — e.g. `tileart.uop` texture refs, `EffectDefinitionCollection`
-layer textures, `MultiCollection` per-tile metadata, terrain names.
+0-based index** — e.g. `tileart.uop` texture refs, `TerrainDefinition.uop`
+terrain names + shader-class names + WorldArt texture filenames,
+`EffectDefinitionCollection` layer textures, `MultiCollection` per-tile metadata.
+
+The terrain path is the clearest example: `TerrainDefinition[texMap]`'s
+`TextureInfo` stores `shaderNameIDX` and per-texture `textureIDX` as **indices
+into this table**; the strings are `"UODefaultTerrainLayer"` and WorldArt
+filenames like `"02000011_Grass_B.tga"` (worldart id = the 8-hex prefix). See
+[TerrainDefinition.md](TerrainDefinition.md) and the findings doc (P1 CORRECTION).
 
 ## Naming
 
@@ -39,6 +46,7 @@ stringCount × {
 
 ## Notes for the C# port
 
-- Decompress once at load, keep the raw buffer, and expose
-  `GetStringAtOffset(int)` that reads the `u16 len` then `len` ASCII bytes.
-  ClassicUO's `EcStringDictionary` already does this.
+- Decompress once at load and parse the whole table into a `string[] values`
+  (header `u64,u32 count,i16`, then `count × {u16 len, ascii[len]}`). Consumers
+  index it as `values[idx]` (0-based). Keep an offset accessor too if needed, but
+  **index access is what tileart/terrain/effects use.**

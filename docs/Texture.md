@@ -6,6 +6,27 @@
 
 The **high-resolution (Enhanced Client) static art** — replacement DDS textures for a subset of classic statics. Sizes range up to 256×256 (DXT-compressed). Not all classic statics have HD replacements; this archive is a strict subset of `LegacyTexture.uop`'s id space.
 
+**It also holds the EC terrain textures** (the actual ground albedo/mask/cube maps), in a dedicated id range — see below.
+
+## Also holds: the EC terrain textures (`0x01/0x02/0x03xxxxxx`)
+
+The chunked-mesh terrain renderer pulls **all** its textures from here (not from
+`TerrainTexture.uop`). They occupy high id bands and the string-dictionary path
+encodes a human name: `Data\WorldArt\{id:08x}_{Name}.tga`, packed as
+`build/worldart/{id:08x}.dds`.
+
+| id band | role | examples |
+|--------|------|----------|
+| `0x01xxxxxx` | masks / noise / cubemaps (alpha-only or reflection) | `01000003_noise_alpha`, `01000004_noise_alpha_sharp`, `01000013_water_alpha`, `01000014_cube0`, `01000017_cube3` |
+| `0x02xxxxxx` | **terrain albedo**, in `_A`/`_B` pairs per material (even=512² partner, odd=256² base) | `02000010_Grass_C`/`02000011_Grass_B`, `02000070_Sand_A`/`02000071_Sand_B` |
+| `0x03xxxxxx` | extra per-material overlays | `03000121`, `03000251`, … |
+
+These are **referenced by name** from [`TerrainDefinition.uop`](TerrainDefinition.md)
+via [`string_dictionary.uop`](string_dictionary.md) (the worldart id is the
+8-hex-digit filename prefix), and decoded as ordinary DXT (DXT1 = opaque albedo,
+DXT5 = carries the mask alpha). Full chain + composition:
+[EC_Terrain_Renderer_Findings.md](EC_Terrain_Renderer_Findings.md) → P1 CORRECTION.
+
 ## Naming
 
 ```
