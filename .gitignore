@@ -55,10 +55,14 @@ tools/ghidra/jdk/
 tools/ghidra/*.zip
 tools/ghidra/project/
 tools/ghidra/*.jsonl
+# Generated decompile dumps / index sidecars (regenerate via scripts/*.java)
+tools/ghidra/*.json
 
 # Generated research output and image/data dumps
 tools/ec_research/out/
 tools/ec_research/dump_*/
+# Research render artifacts (regenerate from the scripts)
+tools/ec_research/*.png
 
 # Mono launcher runtime (53 MB of binaries)
 tools/monokickstart/
